@@ -1,0 +1,14 @@
+# Compiled smoke-test outputs
+tests/*.pdf
+tests/*.png
+
+# Editor compile artifacts of the library source
+src/*.pdf
+
+# macOS metadata
+.DS_Store
+
+# Local agent instructions
+AGENTS.md
+CLAUDE.md
+PACKAGING.md
