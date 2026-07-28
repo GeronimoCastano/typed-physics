@@ -1,33 +1,66 @@
 // Plane vectors as `(x, y)` pairs, which is also what CeTZ accepts as a
 // coordinate, so a computed position can be handed straight to a draw call.
 
-#let plus(a, b) = (a.at(0) + b.at(0), a.at(1) + b.at(1))
+#let add(first-vector, second-vector) = (
+  first-vector.at(0) + second-vector.at(0),
+  first-vector.at(1) + second-vector.at(1),
+)
 
-#let minus(a, b) = (a.at(0) - b.at(0), a.at(1) - b.at(1))
+#let subtract(minuend-vector, subtrahend-vector) = (
+  minuend-vector.at(0) - subtrahend-vector.at(0),
+  minuend-vector.at(1) - subtrahend-vector.at(1),
+)
 
-#let times(v, factor) = (v.at(0) * factor, v.at(1) * factor)
+#let scale(vector-value, scalar) = (
+  vector-value.at(0) * scalar,
+  vector-value.at(1) * scalar,
+)
 
-#let dot(a, b) = a.at(0) * b.at(0) + a.at(1) * b.at(1)
+#let dot-product(first-vector, second-vector) = (
+  first-vector.at(0) * second-vector.at(0)
+    + first-vector.at(1) * second-vector.at(1)
+)
 
-#let length(v) = calc.sqrt(dot(v, v))
+#let cross-product(first-vector, second-vector) = (
+  first-vector.at(0) * second-vector.at(1)
+    - first-vector.at(1) * second-vector.at(0)
+)
 
-#let unit(v) = {
-  let size = length(v)
-  if size == 0 { v } else { times(v, 1 / size) }
+#let magnitude(vector-value) = calc.sqrt(dot-product(vector-value, vector-value))
+
+#let normalized(vector-value) = {
+  let vector-magnitude = magnitude(vector-value)
+  if vector-magnitude == 0 {
+    vector-value
+  } else {
+    scale(vector-value, 1 / vector-magnitude)
+  }
 }
 
-#let reversed(v) = times(v, -1)
+#let reversed(vector-value) = scale(vector-value, -1)
 
 // Rotations by a quarter turn. `left-normal` of a surface direction points out
 // of the body that surface belongs to when the body lies to its right.
-#let left-normal(v) = (-v.at(1), v.at(0))
+#let left-normal(vector-value) = (-vector-value.at(1), vector-value.at(0))
 
-#let right-normal(v) = (v.at(1), -v.at(0))
+#let right-normal(vector-value) = (vector-value.at(1), -vector-value.at(0))
 
-#let from-angle(direction) = (calc.cos(direction), calc.sin(direction))
+#let direction-from-angle(direction-angle) = (
+  calc.cos(direction-angle),
+  calc.sin(direction-angle),
+)
 
-#let angle-of(v) = calc.atan2(v.at(0), v.at(1))
+#let angle-of(vector-value) = calc.atan2(
+  vector-value.at(0),
+  vector-value.at(1),
+)
 
-#let stepped(origin, direction, distance) = plus(origin, times(direction, distance))
+#let point-along(origin, direction, distance) = add(
+  origin,
+  scale(direction, distance),
+)
 
-#let midpoint(a, b) = times(plus(a, b), 0.5)
+#let midpoint(first-point, second-point) = scale(
+  add(first-point, second-point),
+  0.5,
+)

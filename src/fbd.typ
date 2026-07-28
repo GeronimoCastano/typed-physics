@@ -6,90 +6,161 @@
 // for.
 
 #import "@preview/cetz:0.5.2"
-#import cetz.draw: anchor, content, group, line
+#import cetz.draw: anchor, group, line
 #import "vector.typ"
 #import "expression.typ"
 #import "forces.typ"
 #import "render.typ"
+#import "style.typ": resolve-body-style, resolve-force-style
 
-#let _at-origin(body) = body + (
+#let _body-centered-at-origin(body) = body + (
   center: (0, 0),
-  contact: vector.times(body.outward-normal, -body.size / 2),
+  contact: vector.scale(body.outward-normal, -body.half-extent-normal),
 )
 
 // Arrows are drawn in proportion to the forces they stand for, so a free-body
 // diagram reads as a comparison. That is only honest when every magnitude is
 // known; as soon as one is symbolic, they all fall back to one length.
-#let _arrow-lengths(acting, th) = {
-  let values = acting.map(force => if force.magnitude == none { none } else { expression.value-of(force.magnitude) })
-  let known = values.filter(value => value != none and value > 0)
-  if known.len() != values.len() or known.len() == 0 {
-    return values.map(_ => th.force-length)
+#let force-arrow-lengths(acting-forces, diagram-style) = {
+  let force-magnitude-values = acting-forces.map(
+    force => if force.magnitude == none {
+      none
+    } else {
+      expression.value-of(force.magnitude)
+    },
+  )
+  let known-positive-magnitudes = force-magnitude-values.filter(
+    magnitude => magnitude != none and magnitude > 0,
+  )
+  let every-force-has-a-known-positive-magnitude = (
+    known-positive-magnitudes.len() == force-magnitude-values.len()
+      and known-positive-magnitudes.len() > 0
+  )
+  let full-length-of(force) = resolve-force-style(
+    diagram-style,
+    force.style,
+    force.role,
+  ).length
+  if not every-force-has-a-known-positive-magnitude {
+    return acting-forces.map(full-length-of)
   }
-  let largest = calc.max(..known)
-  values.map(value => calc.max(th.force-floor, th.force-length * value / largest))
+  let largest-force-magnitude = calc.max(..known-positive-magnitudes)
+  acting-forces
+    .zip(force-magnitude-values)
+    .map(((force, force-magnitude)) => calc.max(
+      diagram-style.force-floor,
+      full-length-of(force) * force-magnitude / largest-force-magnitude,
+    ))
 }
 
-// How far the body's own outline reaches in a given direction, so an arrow can
-// start where the body ends instead of crossing whatever is drawn inside it.
-#let _boundary-distance(body, direction) = {
-  let along = calc.abs(vector.dot(direction, body.direction))
-  let outward = calc.abs(vector.dot(direction, body.outward-normal))
-  (body.size / 2) / calc.max(along, outward)
-}
-
-// The surface's axes, drawn shorter than the force arrows and labelled beside
-// their own tips so an axis never collides with the force that follows it.
-#let draw-axes(body, th, reach: 1.15) = {
-  let stroke = th.construction-stroke
-  let axes = (
+// Names the surface's axes without drawing them. A letter set beside the
+// direction it stands for says which way is positive; a line through the force
+// arrows would only compete with them.
+#let render-surface-axis-labels(body, diagram-style) = {
+  let surface-axes = (
     (body.direction, $x$, vector.reversed(body.outward-normal)),
     (body.outward-normal, $y$, body.direction),
   )
-  for (direction, label, aside) in axes {
-    let tip = vector.times(direction, reach)
-    line(vector.times(direction, -reach * 0.45), tip, stroke: stroke)
-    render.labelled(
-      vector.stepped(vector.stepped(tip, direction, 0.12), aside, 0.36),
-      text(fill: rgb("#868E96"), label),
-      th.force-text,
+  for (axis-direction, axis-label, label-offset-direction) in surface-axes {
+    render.render-label(
+      vector.point-along(
+        vector.scale(
+          axis-direction,
+          render.body-boundary-distance(body, axis-direction) + 0.42,
+        ),
+        label-offset-direction,
+        0.32,
+      ),
+      text(fill: rgb("#868E96"), axis-label),
+      diagram-style.force-text,
     )
   }
 }
 
-#let draw-fbd(scene, name, th, solution: none, axes: auto, outline: true) = {
-  let body = _at-origin(scene.bodies.at(name))
-  let acting = forces.enumerate-forces(scene, name, solution: solution)
+#let render-free-body-diagram(
+  scene,
+  name,
+  diagram-style,
+  solution: none,
+  axes: auto,
+  outline: true,
+) = {
+  let body = _body-centered-at-origin(scene.bodies.at(name))
+  let acting-forces = forces.enumerate-forces(
+    scene,
+    name,
+    solution: solution,
+  )
   assert(
-    acting.len() > 0,
+    acting-forces.len() > 0,
     message: "typed-physics: block \"" + name + "\" has no forces on it — give it a `mass:` or a surface to rest on",
   )
-  let lengths = _arrow-lengths(acting, th)
-  let show-axes = if axes == auto { body.inclination != 0deg } else { axes }
+  let arrow-lengths = force-arrow-lengths(
+    acting-forces,
+    diagram-style,
+  )
+  let should-render-axes = if axes == auto {
+    body.inclination != 0deg
+  } else {
+    axes
+  }
 
   group(
     name: name,
     {
-      if show-axes { draw-axes(body, th) }
-      if outline {
-        line(..render.body-corners(body), close: true, fill: th.body-fill, stroke: th.body-stroke)
+      if should-render-axes {
+        render-surface-axis-labels(body, diagram-style)
       }
-      let inside = if body.label != auto { body.label } else { body.name }
-      render.labelled((0, 0), inside, th.label-text)
+      let body-style = resolve-body-style(diagram-style, body.style)
+      let inside-body-label = if body.label != auto {
+        body.label
+      } else {
+        body.name
+      }
 
-      for (index, force) in acting.enumerate() {
-        let colour = th.force-colors.at(force.role)
-        let start = if outline { _boundary-distance(body, force.direction) } else { 0 }
-        let tail = vector.times(force.direction, start)
-        let tip = vector.times(force.direction, start + lengths.at(index))
-        render.arrow(tail, tip, colour, th)
-        render.labelled(
-          vector.stepped(tip, force.direction, 0.3),
-          text(fill: colour, force.symbol),
-          th.force-text,
+      for (force-index, acting-force) in acting-forces.enumerate() {
+        let force-style = resolve-force-style(
+          diagram-style,
+          acting-force.style,
+          acting-force.role,
         )
-        anchor(force.role, tip)
+        let arrow-start-distance = if outline {
+          render.body-visible-boundary-distance(
+            body,
+            acting-force.direction,
+            body-style.stroke,
+          )
+        } else {
+          0
+        }
+        let arrow-tail-position = (0, 0)
+        let arrow-tip-position = vector.scale(
+          acting-force.direction,
+          arrow-start-distance + arrow-lengths.at(force-index),
+        )
+        render.render-force-arrow(
+          arrow-tail-position,
+          arrow-tip-position,
+          force-style.color,
+          force-style.stroke,
+        )
+        render.render-label(
+          vector.point-along(
+            arrow-tip-position,
+            acting-force.direction,
+            0.3,
+          ),
+          text(fill: force-style.color, acting-force.symbol),
+          force-style.text,
+        )
+        anchor(acting-force.role, arrow-tip-position)
       }
+      if outline { render.render-body-outline(body, body-style) }
+      render.render-label(
+        (0, 0),
+        inside-body-label,
+        body-style.label-text,
+      )
       anchor("center", (0, 0))
       anchor("default", (0, 0))
     },
@@ -98,80 +169,197 @@
 
 // The weight resolved into the surface's own axes, with the construction lines
 // and the right angle that make the two components readable as one rectangle.
-#let draw-components(scene, name, th, of: "weight") = {
+#let render-weight-component-vectors(
+  scene,
+  body,
+  diagram-style,
+  weight-arrow-length,
+  should-render-weight-arrow: true,
+) = {
+  assert(
+    body.mass != none,
+    message: "typed-physics: block \"" + body.name + "\" needs a `mass:` before its weight can be resolved",
+  )
+  let weight-vector = (0, -weight-arrow-length)
+  let weight-tangent-component-vector = vector.scale(
+    body.direction,
+    vector.dot-product(weight-vector, body.direction),
+  )
+  let weight-outward-normal-component-vector = vector.scale(
+    body.outward-normal,
+    vector.dot-product(weight-vector, body.outward-normal),
+  )
+  let weight-force-magnitude = expression.product(body.mass, scene.gravity)
+  let surface-inclination = body.inclination-quantity
+  let body-center = body.center
+  let weight-tip-position = vector.add(body-center, weight-vector)
+  let weight-tangent-component-tip = vector.add(
+    body-center,
+    weight-tangent-component-vector,
+  )
+  let weight-outward-normal-component-tip = vector.add(
+    body-center,
+    weight-outward-normal-component-vector,
+  )
+
+  line(
+    weight-tangent-component-tip,
+    weight-tip-position,
+    stroke: diagram-style.construction-stroke,
+  )
+  line(
+    weight-outward-normal-component-tip,
+    weight-tip-position,
+    stroke: diagram-style.construction-stroke,
+  )
+
+  let component-color = diagram-style.force-colors.component
+  render.render-force-arrow(
+    body-center,
+    weight-tangent-component-tip,
+    component-color,
+    diagram-style.force-stroke,
+  )
+  render.render-force-arrow(
+    body-center,
+    weight-outward-normal-component-tip,
+    component-color,
+    diagram-style.force-stroke,
+  )
+  if should-render-weight-arrow {
+    render.render-force-arrow(
+      body-center,
+      weight-tip-position,
+      diagram-style.force-colors.weight,
+      diagram-style.force-stroke,
+    )
+    render.render-label(
+      vector.point-along(weight-tip-position, (0, -1), 0.18),
+      text(fill: diagram-style.force-colors.weight, $W$),
+      diagram-style.force-text,
+      side: "north",
+    )
+  }
+
+  // Each component is labelled just past its own tip and grows outward from
+  // the construction, which is the only way all three labels fit.
+  render.render-label(
+    vector.point-along(
+      weight-tangent-component-tip,
+      vector.normalized(weight-tangent-component-vector),
+      0.16,
+    ),
+    text(
+      fill: component-color,
+      expression.math-of(
+        expression.product(
+          weight-force-magnitude,
+          expression.sine(surface-inclination),
+        ),
+      ),
+    ),
+    diagram-style.force-text,
+    side: "east",
+  )
+  render.render-label(
+    vector.point-along(
+      weight-outward-normal-component-tip,
+      vector.normalized(weight-outward-normal-component-vector),
+      0.16,
+    ),
+    text(
+      fill: component-color,
+      expression.math-of(
+        expression.product(
+          weight-force-magnitude,
+          expression.cosine(surface-inclination),
+        ),
+      ),
+    ),
+    diagram-style.force-text,
+    side: "west",
+  )
+  if body.inclination != 0deg {
+    // Marked at the corner of the construction rectangle rather than at the
+    // body, where the two components meet under the body's own fill.
+    render.render-right-angle-marker(
+      weight-tangent-component-tip,
+      vector.reversed(
+        vector.normalized(weight-tangent-component-vector),
+      ),
+      vector.normalized(weight-outward-normal-component-vector),
+      diagram-style,
+    )
+    render.render-angle-marker(
+      body-center,
+      vector.normalized(weight-outward-normal-component-vector),
+      (0, -1),
+      surface-inclination.symbol,
+      diagram-style,
+      radius: weight-arrow-length * 0.34,
+    )
+  }
+}
+
+#let render-component-decomposition(
+  scene,
+  name,
+  diagram-style,
+  of: "weight",
+) = {
   assert(
     of == "weight",
     message: "typed-physics 0.1.0 resolves the weight into components; `of: \"" + of + "\"` is not available yet",
   )
-  let body = _at-origin(scene.bodies.at(name))
-  assert(
-    body.mass != none,
-    message: "typed-physics: block \"" + name + "\" needs a `mass:` before its weight can be resolved",
-  )
-
+  let body = _body-centered-at-origin(scene.bodies.at(name))
   // Longer than a free-body arrow: the construction has to clear the body it
   // is drawn from before the two components can be labelled apart.
-  let reach = th.force-length * 1.5
-  let weight-vector = (0, -reach)
-  let along = vector.times(body.direction, vector.dot(weight-vector, body.direction))
-  let outward = vector.times(body.outward-normal, vector.dot(weight-vector, body.outward-normal))
-  let weight = expression.product(body.mass, scene.gravity)
-  let inclination = body.inclination-quantity
+  let weight-arrow-length = diagram-style.force-length * 1.5
 
   group(
     name: name,
     {
-      line(..render.body-corners(body), close: true, fill: th.body-fill, stroke: th.body-stroke)
-
-      line(along, weight-vector, stroke: th.construction-stroke)
-      line(outward, weight-vector, stroke: th.construction-stroke)
-
-      let component-colour = th.force-colors.component
-      render.arrow((0, 0), along, component-colour, th)
-      render.arrow((0, 0), outward, component-colour, th)
-      render.arrow((0, 0), weight-vector, th.force-colors.weight, th)
-
-      // Each component is labelled just past its own tip and grows outward
-      // from the construction, which is the only way all three labels fit.
-      render.labelled(
-        vector.stepped(along, vector.unit(along), 0.16),
-        text(fill: component-colour, expression.math-of(expression.product(weight, expression.sine(inclination)))),
-        th.force-text,
-        side: "east",
+      render.render-body-outline(
+        body,
+        resolve-body-style(diagram-style, body.style),
       )
-      render.labelled(
-        vector.stepped(outward, vector.unit(outward), 0.16),
-        text(fill: component-colour, expression.math-of(expression.product(weight, expression.cosine(inclination)))),
-        th.force-text,
-        side: "west",
+      render-weight-component-vectors(
+        scene,
+        body,
+        diagram-style,
+        weight-arrow-length,
       )
-      render.labelled(
-        vector.stepped(weight-vector, (0, -1), 0.18),
-        text(fill: th.force-colors.weight, $W$),
-        th.force-text,
-        side: "north",
-      )
-
-      if body.inclination != 0deg {
-        // Marked at the corner of the construction rectangle rather than at
-        // the body, where the two components meet under the body's own fill.
-        render.right-angle-mark(
-          along,
-          vector.reversed(vector.unit(along)),
-          vector.unit(outward),
-          th,
-        )
-        render.angle-mark(
-          (0, 0),
-          vector.unit(outward),
-          (0, -1),
-          inclination.symbol,
-          th,
-          radius: reach * 0.34,
-        )
-      }
       anchor("center", (0, 0))
       anchor("default", (0, 0))
+    },
+  )
+}
+
+#let render-component-decomposition-on-body(
+  scene,
+  name,
+  diagram-style,
+  weight-arrow-length: auto,
+  should-render-weight-arrow: true,
+) = {
+  let body = scene.bodies.at(name)
+  let resolved-weight-arrow-length = if weight-arrow-length == auto {
+    diagram-style.force-length * 1.5
+  } else {
+    weight-arrow-length
+  }
+  group(
+    name: "components-" + name,
+    {
+      render-weight-component-vectors(
+        scene,
+        body,
+        diagram-style,
+        resolved-weight-arrow-length,
+        should-render-weight-arrow: should-render-weight-arrow,
+      )
+      anchor("center", body.center)
+      anchor("default", body.center)
     },
   )
 }

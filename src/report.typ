@@ -1,119 +1,128 @@
-// Typesetting what the solver found.
+// Typesetting a quantity the solver found.
 //
-// Every line is the same expression rendered at a different depth — symbolic,
-// substituted, evaluated — so a report and a closed form can never disagree
-// about the situation they describe.
+// The package states quantities; the argument around them is the author's to
+// write. Nothing here composes a sentence that a document in another language
+// would have to fight.
 
 #import "expression.typ"
-#import "forces.typ"
+#import "forces.typ" as force-enumeration
 
 #let newtons = $"N"$
 #let metres-per-second-squared = $"m/s"^2$
 
-#let _with-unit(value, unit) = if unit == none { value } else { $#value thin #unit$ }
-
-// One equation, shown at as many depths as the terms allow: `N = m g cos θ`,
-// then the substitution, then the number.
-#let equation(symbol, term, unit: none, steps: false) = {
-  let pieces = (symbol,)
-  let plain = expression.is-number(term)
-  if not plain { pieces.push(expression.math-of(term)) }
-  if steps and not plain and expression.is-known(term) {
-    pieces.push(expression.math-of(term, substitute: true))
-  }
-  let value = expression.numeric-math-of(term)
-  if value != none { pieces.push(_with-unit(value, unit)) }
-  $#pieces.join($=$)$
+#let _with-unit(rendered-value, unit) = if unit == none {
+  rendered-value
+} else {
+  $#rendered-value thin #unit$
 }
 
-#let _available(solution) = {
-  let value = expression.numeric-math-of(solution.available.expression)
-  if value == none { $mu_s N$ } else { $mu_s N = #_with-unit(value, newtons)$ }
+// What is left of an expression once every quantity that has a number is
+// replaced by it. A fully known term reaches a value, a fully symbolic one does
+// not move, and a mixed one lands somewhere in between.
+#let _partially-evaluated(term) = {
+  let folded-term = expression.evaluated-where-known(term)
+  if folded-term == term { none } else { folded-term }
 }
 
-#let _verdict(solution) = {
-  let name = solution.body
-  if not solution.rough {
-    if solution.regime == "static" {
-      return [The contact is frictionless and nothing pulls *#name* along it — it is in equilibrium.]
-    }
-    return [The contact is frictionless, so nothing opposes the pull along it — *#name* slides.]
+// A stated quantity is the value when every quantity behind it carries one, and
+// otherwise the expression carried as far as the declared numbers reach.
+#let _typeset-stated-value(symbol, term, unit: none) = {
+  let numeric-value = expression.numeric-math-of(term)
+  if numeric-value != none {
+    return $#symbol = #_with-unit(numeric-value, unit)$
   }
-  if solution.assumed {
-    let stated = if solution.regime == "static" {
-      [holds still]
-    } else { [slides, so the friction below is $mu_k N$] }
-    return [Taking it as given that *#name* #stated — the regime was assumed, not checked.]
+  let folded-term = _partially-evaluated(term)
+  if folded-term != none {
+    return $#symbol = #_with-unit(expression.math-of(folded-term), unit)$
   }
-  if solution.regime == "static" {
-    return [
-      Required friction #equation($f_"req"$, solution.required.expression, unit: newtons) fits inside the available
-      #_available(solution) — *#name* stays put.
-    ]
-  }
-  [
-    Required static friction #equation($f_"req"$, solution.required.expression, unit: newtons) exceeds the available
-    #_available(solution) — *#name* slides. Solving with $mu_k$.
-  ]
+  $#symbol = #expression.math-of(term)$
 }
 
-#let _heading(scene, solution) = {
-  let surface = scene.surfaces.at(solution.surface)
-  let inclination = if surface.kind == "ramp" {
-    [ at #expression.format-angle(surface.inclination.deg())]
-  } else { [] }
-  [*#solution.body* on #emph(solution.surface)#inclination]
-}
-
-// Where the body goes, said the way the figure reads: a slope has an uphill
-// and a downhill, level ground only has a left and a right.
-#let _direction-words(scene, solution) = {
-  let surface = scene.surfaces.at(solution.surface)
-  if surface.kind == "ramp" {
+// Where the body goes, said the way the figure reads: a slope has an uphill and
+// a downhill, level ground only has a left and a right. Written in English, so
+// `direction: false` is how a document in another language leaves it out.
+#let _motion-direction-words(scene, solution) = {
+  let support-surface = scene.surfaces.at(solution.surface)
+  if support-surface.kind == "ramp" {
     if solution.downhill { "down the incline" } else { "up the incline" }
   } else if solution.motion.at(0) >= 0 { "to the right" } else { "to the left" }
 }
 
-#let solution-report(scene, solution, steps: false) = {
-  if solution.status == "undetermined" {
-    return block[
-      typed-physics cannot decide whether *#solution.body* slides, because #solution.reason. Give the coefficients and
-      masses as numbers, or state the regime with `solve(assume: "static")` or `solve(assume: "sliding")`.
+// What a problem asks for when it does not say. A body that stays put has
+// already answered the interesting question with its regime.
+#let _quantity-asked-for(solution) = if solution.regime == "static" {
+  "regime"
+} else {
+  "acceleration"
+}
+
+#let typeset-answer(scene, solution, find: auto, direction: true) = {
+  let solution-is-undetermined = solution.status == "undetermined"
+  let asked-for = if find == auto {
+    if solution-is-undetermined {
+      "regime"
+    } else { _quantity-asked-for(solution) }
+  } else { find }
+  assert(
+    asked-for in ("acceleration", "normal", "friction", "regime"),
+    message: "typed-physics: solve(find:) takes \"acceleration\", \"normal\", \"friction\" or \"regime\", got " + repr(find),
+  )
+
+  // The normal force falls out of the balance across the surface, which does
+  // not depend on which way the body is about to go.
+  if asked-for == "normal" {
+    return _typeset-stated-value($N$, solution.normal.expression, unit: newtons)
+  }
+
+  if solution-is-undetermined {
+    return [
+      typed-physics cannot decide whether *#solution.body* slides, because #solution.reason. Give the coefficients and masses
+      as numbers, or state the regime with `assume:`.
     ]
   }
 
-  let direction = _direction-words(scene, solution)
-  let lines = (
-    _heading(scene, solution),
-    equation($N$, solution.normal.expression, unit: newtons, steps: steps),
-    _verdict(solution),
-    if not solution.rough {
-      none
-    } else if solution.regime == "static" {
-      equation($f_s$, solution.friction.expression, unit: newtons, steps: steps)
-    } else {
-      equation($f_k$, solution.friction.expression, unit: newtons, steps: steps)
-    },
-    if solution.regime == "static" {
-      [$a = 0$ — the system is in equilibrium.]
-    } else {
-      [#equation($a$, solution.acceleration.expression, unit: metres-per-second-squared, steps: steps), #direction]
-    },
+  if asked-for == "regime" { return solution.regime }
+
+  if asked-for == "friction" {
+    let friction-symbol = if not solution.rough {
+      $f$
+    } else if solution.regime == "static" { $f_s$ } else { $f_k$ }
+    return _typeset-stated-value(
+      friction-symbol,
+      solution.friction.expression,
+      unit: newtons,
+    )
+  }
+
+  let stated-acceleration = _typeset-stated-value(
+    $a$,
+    solution.acceleration.expression,
+    unit: metres-per-second-squared,
   )
-  block(stack(spacing: 0.65em, ..lines.filter(line => line != none)))
+  if solution.regime == "static" or not direction {
+    return stated-acceleration
+  }
+  [#stated-acceleration, #_motion-direction-words(scene, solution)]
 }
 
 // Every force on a body with its components in the surface's own axes: the
 // bookkeeping behind the free-body diagram, in the order the diagram draws it.
-#let force-table(scene, name, solution: none) = {
+#let typeset-force-table(scene, name, solution: none) = {
   let body = scene.bodies.at(name)
-  let acting = forces.enumerate-forces(scene, name, solution: solution)
-  let cell(force, axis) = {
+  let acting-forces = force-enumeration.enumerate-forces(
+    scene,
+    name,
+    solution: solution,
+  )
+  let force-component-cell(force, axis-direction) = {
     if force.magnitude == none { return [—] }
-    let value = expression.value-of(force.magnitude)
-    if value == none { return [—] }
-    let component = value * (force.direction.at(0) * axis.at(0) + force.direction.at(1) * axis.at(1))
-    [#expression.format-number(component)]
+    let force-magnitude = expression.value-of(force.magnitude)
+    if force-magnitude == none { return [—] }
+    let signed-component = force-magnitude * (
+      force.direction.at(0) * axis-direction.at(0)
+        + force.direction.at(1) * axis-direction.at(1)
+    )
+    [#expression.format-number(signed-component)]
   }
   table(
     columns: 4,
@@ -122,15 +131,19 @@
     table.hline(),
     table.header([Force], [Magnitude (N)], [Along], [Out of surface]),
     table.hline(),
-    ..acting
+    ..acting-forces
       .map(force => (
         force.symbol,
         if force.magnitude == none { [—] } else {
-          let value = expression.value-of(force.magnitude)
-          if value == none { [—] } else { [#expression.format-number(value)] }
+          let force-magnitude = expression.value-of(force.magnitude)
+          if force-magnitude == none {
+            [—]
+          } else {
+            [#expression.format-number(force-magnitude)]
+          }
         },
-        cell(force, body.direction),
-        cell(force, body.outward-normal),
+        force-component-cell(force, body.direction),
+        force-component-cell(force, body.outward-normal),
       ))
       .flatten(),
     table.hline(),

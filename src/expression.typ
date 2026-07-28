@@ -11,25 +11,38 @@
 // results read like textbook answers: 34.0, 2.36, 0.289.
 #let format-number(value, digits: 3) = {
   if value == none { return "?" }
-  let size = calc.abs(value)
-  let decimals = if size == 0 {
+  let absolute-value = calc.abs(value)
+  let decimal-places = if absolute-value == 0 {
     2
   } else {
-    calc.clamp(digits - 1 - int(calc.floor(calc.log(size, base: 10))), 0, 6)
+    calc.clamp(
+      digits - 1 - int(calc.floor(calc.log(absolute-value, base: 10))),
+      0,
+      6,
+    )
   }
-  let rounded = calc.round(value, digits: decimals)
-  if decimals == 0 { return str(calc.round(rounded)) }
-  let parts = str(rounded).split(".")
-  let whole = parts.at(0)
-  let fraction = if parts.len() > 1 { parts.at(1) } else { "" }
-  while fraction.len() < decimals { fraction += "0" }
-  whole + "." + fraction
+  let rounded-value = calc.round(value, digits: decimal-places)
+  if decimal-places == 0 { return str(calc.round(rounded-value)) }
+
+  let decimal-parts = str(rounded-value).split(".")
+  let whole-number-part = decimal-parts.at(0)
+  let fractional-part = if decimal-parts.len() > 1 {
+    decimal-parts.at(1)
+  } else {
+    ""
+  }
+  while fractional-part.len() < decimal-places { fractional-part += "0" }
+  whole-number-part + "." + fractional-part
 }
 
 #let format-angle(degrees) = {
-  let rounded = calc.round(degrees, digits: 1)
-  let shown = if rounded == calc.round(rounded) { str(calc.round(rounded)) } else { str(rounded) }
-  shown + "°"
+  let rounded-degrees = calc.round(degrees, digits: 1)
+  let displayed-degrees = if rounded-degrees == calc.round(rounded-degrees) {
+    str(calc.round(rounded-degrees))
+  } else {
+    str(rounded-degrees)
+  }
+  displayed-degrees + "°"
 }
 
 // ── Leaves ───────────────────────────────────────────────────────────────────
@@ -77,42 +90,63 @@
 }
 
 #let sum(..parts) = {
-  let terms = ()
-  let constant = 0.0
+  let nonconstant-terms = ()
+  let constant-sum = 0.0
   for part in parts.pos() {
-    let pieces = if part.kind == "sum" { part.terms } else { (part,) }
-    for piece in pieces {
-      if is-number(piece) { constant += piece.value } else { terms.push(piece) }
+    let additive-terms = if part.kind == "sum" { part.terms } else { (part,) }
+    for additive-term in additive-terms {
+      if is-number(additive-term) {
+        constant-sum += additive-term.value
+      } else {
+        nonconstant-terms.push(additive-term)
+      }
     }
   }
-  if constant != 0 { terms.push(number(constant)) }
-  if terms.len() == 0 { return number(0) }
-  if terms.len() == 1 { return terms.first() }
-  (kind: "sum", terms: terms)
+  // A constant leads the sum, so a partly evaluated expression reads the way it
+  // would be written by hand: `4.90 - 8.50 mu_k`, not `-8.50 mu_k + 4.90`.
+  if constant-sum != 0 { nonconstant-terms.insert(0, number(constant-sum)) }
+  if nonconstant-terms.len() == 0 { return number(0) }
+  if nonconstant-terms.len() == 1 { return nonconstant-terms.first() }
+  (kind: "sum", terms: nonconstant-terms)
 }
 
 #let difference(left, right) = sum(left, negated(right))
 
 #let product(..parts) = {
-  let factors = ()
-  let constant = 1.0
+  let nonconstant-factors = ()
+  let constant-product = 1.0
   for part in parts.pos() {
-    let piece = part
-    if piece.kind == "negated" {
-      constant *= -1
-      piece = piece.term
+    let multiplicative-term = part
+    if multiplicative-term.kind == "negated" {
+      constant-product *= -1
+      multiplicative-term = multiplicative-term.term
     }
-    let pieces = if piece.kind == "product" { piece.factors } else { (piece,) }
-    for factor in pieces {
-      if is-number(factor) { constant *= factor.value } else { factors.push(factor) }
+    let multiplicative-factors = if multiplicative-term.kind == "product" {
+      multiplicative-term.factors
+    } else {
+      (multiplicative-term,)
+    }
+    for factor in multiplicative-factors {
+      if is-number(factor) {
+        constant-product *= factor.value
+      } else {
+        nonconstant-factors.push(factor)
+      }
     }
   }
-  if constant == 0 { return number(0) }
-  if factors.len() == 0 { return number(constant) }
-  let signed = constant < 0
-  if calc.abs(constant) != 1 { factors.insert(0, number(calc.abs(constant))) }
-  let combined = if factors.len() == 1 { factors.first() } else { (kind: "product", factors: factors) }
-  if signed { negated(combined) } else { combined }
+  if constant-product == 0 { return number(0) }
+  if nonconstant-factors.len() == 0 { return number(constant-product) }
+
+  let product-is-negative = constant-product < 0
+  if calc.abs(constant-product) != 1 {
+    nonconstant-factors.insert(0, number(calc.abs(constant-product)))
+  }
+  let combined-product = if nonconstant-factors.len() == 1 {
+    nonconstant-factors.first()
+  } else {
+    (kind: "product", factors: nonconstant-factors)
+  }
+  if product-is-negative { negated(combined-product) } else { combined-product }
 }
 
 // Divides `term` by `factor` when every one of its terms visibly contains that
@@ -121,33 +155,42 @@
 #let without-factor(term, factor) = {
   if term == factor { return number(1) }
   if term.kind == "negated" {
-    let inner = without-factor(term.term, factor)
-    return if inner == none { none } else { negated(inner) }
+    let divided-inner-term = without-factor(term.term, factor)
+    return if divided-inner-term == none {
+      none
+    } else {
+      negated(divided-inner-term)
+    }
   }
   if term.kind == "sum" {
-    let divided = ()
-    for piece in term.terms {
-      let quotient = without-factor(piece, factor)
-      if quotient == none { return none }
-      divided.push(quotient)
+    let divided-terms = ()
+    for additive-term in term.terms {
+      let divided-term = without-factor(additive-term, factor)
+      if divided-term == none { return none }
+      divided-terms.push(divided-term)
     }
-    return sum(..divided)
+    return sum(..divided-terms)
   }
   if term.kind == "product" and term.factors.contains(factor) {
-    let remaining = term.factors.filter(each => each != factor)
-    return product(..remaining)
+    let remaining-factors = term.factors.filter(
+      candidate-factor => candidate-factor != factor,
+    )
+    return product(..remaining-factors)
   }
   none
 }
 
 #let ratio(numerator, denominator) = {
-  assert(not is-zero(denominator), message: "typed-physics: division by zero while building an expression")
+  assert(
+    not is-zero(denominator),
+    message: "typed-physics: division by zero while building an expression",
+  )
   if is-one(denominator) { return numerator }
   if is-number(numerator) and is-number(denominator) {
     return number(numerator.value / denominator.value)
   }
-  let cancelled = without-factor(numerator, denominator)
-  if cancelled != none { return cancelled }
+  let cancelled-numerator = without-factor(numerator, denominator)
+  if cancelled-numerator != none { return cancelled-numerator }
   (kind: "ratio", numerator: numerator, denominator: denominator)
 }
 
@@ -156,23 +199,23 @@
   (kind: "power", base: base, exponent: exponent)
 }
 
-#let applied(name, argument) = {
+#let trigonometric-function(name, argument) = {
   if is-number(argument) {
-    let value = if name == "sin" {
+    let evaluated-value = if name == "sin" {
       calc.sin(argument.value)
     } else if name == "cos" {
       calc.cos(argument.value)
     } else {
       calc.tan(argument.value)
     }
-    return number(value)
+    return number(evaluated-value)
   }
   (kind: "function", name: name, argument: argument)
 }
 
-#let sine(argument) = applied("sin", argument)
-#let cosine(argument) = applied("cos", argument)
-#let tangent(argument) = applied("tan", argument)
+#let sine(argument) = trigonometric-function("sin", argument)
+#let cosine(argument) = trigonometric-function("cos", argument)
+#let tangent(argument) = trigonometric-function("tan", argument)
 
 // ── Evaluating ───────────────────────────────────────────────────────────────
 
@@ -180,70 +223,125 @@
 // a declared number. Callers use that `none` to decide whether a question is
 // answerable at all rather than to print a wrong number.
 #let value-of(term) = {
-  let kind = term.kind
-  if kind == "number" or kind == "quantity" { return term.value }
-  if kind == "negated" {
-    let inner = value-of(term.term)
-    return if inner == none { none } else { -inner }
+  let term-kind = term.kind
+  if term-kind == "number" or term-kind == "quantity" { return term.value }
+
+  if term-kind == "negated" {
+    let inner-value = value-of(term.term)
+    return if inner-value == none { none } else { -inner-value }
   }
-  if kind == "sum" {
-    let total = 0.0
-    for piece in term.terms {
-      let value = value-of(piece)
-      if value == none { return none }
-      total += value
+
+  if term-kind == "sum" {
+    let evaluated-sum = 0.0
+    for additive-term in term.terms {
+      let term-value = value-of(additive-term)
+      if term-value == none { return none }
+      evaluated-sum += term-value
     }
-    return total
+    return evaluated-sum
   }
-  if kind == "product" {
-    let total = 1.0
+
+  if term-kind == "product" {
+    let evaluated-product = 1.0
     for factor in term.factors {
-      let value = value-of(factor)
-      if value == none { return none }
-      total *= value
+      let factor-value = value-of(factor)
+      if factor-value == none { return none }
+      evaluated-product *= factor-value
     }
-    return total
+    return evaluated-product
   }
-  if kind == "ratio" {
-    let top = value-of(term.numerator)
-    let bottom = value-of(term.denominator)
-    if top == none or bottom == none or bottom == 0 { return none }
-    return top / bottom
+
+  if term-kind == "ratio" {
+    let numerator-value = value-of(term.numerator)
+    let denominator-value = value-of(term.denominator)
+    if numerator-value == none or denominator-value == none or denominator-value == 0 {
+      return none
+    }
+    return numerator-value / denominator-value
   }
-  if kind == "power" {
-    let base = value-of(term.base)
-    let exponent = value-of(term.exponent)
-    if base == none or exponent == none { return none }
-    return calc.pow(base, exponent)
+
+  if term-kind == "power" {
+    let base-value = value-of(term.base)
+    let exponent-value = value-of(term.exponent)
+    if base-value == none or exponent-value == none { return none }
+    return calc.pow(base-value, exponent-value)
   }
-  if kind == "function" {
-    let argument = value-of(term.argument)
-    if argument == none { return none }
-    if term.name == "sin" { return calc.sin(argument) }
-    if term.name == "cos" { return calc.cos(argument) }
-    return calc.tan(argument)
+
+  if term-kind == "function" {
+    let argument-value = value-of(term.argument)
+    if argument-value == none { return none }
+    if term.name == "sin" { return calc.sin(argument-value) }
+    if term.name == "cos" { return calc.cos(argument-value) }
+    return calc.tan(argument-value)
   }
   none
 }
 
 #let is-known(term) = value-of(term) != none
 
+// Puts a number in place of every quantity that has one and leaves the rest
+// standing. The constructors fold as they rebuild, so a mixed expression comes
+// back part arithmetic and part algebra: `g sin θ - μ_k g cos θ` with a numeric
+// gravity and angle but a symbolic coefficient becomes `4.91 - 8.50 μ_k`.
+#let evaluated-where-known(term) = {
+  let term-kind = term.kind
+
+  if term-kind == "number" { return term }
+  if term-kind == "quantity" {
+    return if term.value == none { term } else { number(term.value) }
+  }
+  if term-kind == "negated" { return negated(evaluated-where-known(term.term)) }
+  if term-kind == "sum" {
+    return sum(..term.terms.map(evaluated-where-known))
+  }
+  if term-kind == "product" {
+    return product(..term.factors.map(evaluated-where-known))
+  }
+  if term-kind == "ratio" {
+    return ratio(
+      evaluated-where-known(term.numerator),
+      evaluated-where-known(term.denominator),
+    )
+  }
+  if term-kind == "power" {
+    return power(
+      evaluated-where-known(term.base),
+      evaluated-where-known(term.exponent),
+    )
+  }
+  if term-kind == "function" {
+    return trigonometric-function(
+      term.name,
+      evaluated-where-known(term.argument),
+    )
+  }
+  term
+}
+
 // The magnitude of a term, kept in symbolic form: a negative expression comes
 // back negated rather than wrapped in an absolute-value bar that no one would
 // write by hand. A term whose value is not known yet is judged by its shape,
 // which is enough whenever the sign was built in rather than computed.
 #let magnitude-of(term) = {
-  let value = value-of(term)
-  if value != none { return if value < 0 { negated(term) } else { term } }
+  let evaluated-value = value-of(term)
+  if evaluated-value != none {
+    return if evaluated-value < 0 { negated(term) } else { term }
+  }
   if term.kind == "negated" { return term.term }
   term
 }
 
 // ── Rendering ────────────────────────────────────────────────────────────────
 
-#let _binding-strength(term) = {
-  let kind = term.kind
-  if kind == "sum" { 1 } else if kind == "negated" { 1 } else if kind == "product" { 2 } else if kind == "function" {
+#let _operator-precedence(term) = {
+  let term-kind = term.kind
+  if term-kind == "sum" {
+    1
+  } else if term-kind == "negated" {
+    1
+  } else if term-kind == "product" {
+    2
+  } else if term-kind == "function" {
     3
   } else { 4 }
 }
@@ -251,76 +349,91 @@
 // Renders as math content. `substitute: true` prints every quantity as the
 // number it stands for, which is the middle line of a worked solution.
 #let math-of(term, substitute: false) = {
-  let render(part) = math-of(part, substitute: substitute)
-  let grouped(part, strength) = {
-    let inner = render(part)
-    if _binding-strength(part) < strength { $(inner)$ } else { inner }
+  let render-term(part) = math-of(part, substitute: substitute)
+  let render-with-grouping(part, required-precedence) = {
+    let rendered-part = render-term(part)
+    if _operator-precedence(part) < required-precedence {
+      $(#rendered-part)$
+    } else {
+      rendered-part
+    }
   }
-  let kind = term.kind
+  let term-kind = term.kind
 
-  if kind == "number" { return $#format-number(term.value)$ }
+  if term-kind == "number" { return $#format-number(term.value)$ }
 
-  if kind == "quantity" {
+  if term-kind == "quantity" {
     if not substitute { return term.symbol }
     if term.substituted != auto { return term.substituted }
     return $#format-number(term.value)$
   }
 
-  if kind == "negated" { return $-#grouped(term.term, 2)$ }
+  if term-kind == "negated" {
+    return $-#render-with-grouping(term.term, 2)$
+  }
 
-  if kind == "sum" {
-    let rendered = ()
-    for piece in term.terms {
-      if piece.kind == "negated" {
-        rendered.push($- #grouped(piece.term, 2)$)
-      } else if rendered.len() == 0 {
-        rendered.push(render(piece))
+  if term-kind == "sum" {
+    let rendered-terms = ()
+    for additive-term in term.terms {
+      if additive-term.kind == "negated" {
+        rendered-terms.push($- #render-with-grouping(additive-term.term, 2)$)
+      } else if rendered-terms.len() == 0 {
+        rendered-terms.push(render-term(additive-term))
       } else {
-        rendered.push($+ #render(piece)$)
+        rendered-terms.push($+ #render-term(additive-term)$)
       }
     }
-    return rendered.join($ $)
+    return rendered-terms.join($ $)
   }
 
   // Symbols sit next to each other the way they are written by hand, but two
   // numbers next to each other need the dot to stay readable.
-  if kind == "product" {
+  if term-kind == "product" {
     let shows-a-number(factor) = {
       if factor.kind == "number" { return true }
       factor.kind == "quantity" and substitute and factor.substituted == auto
     }
-    let rendered = ()
+    let rendered-factors = ()
     for (index, factor) in term.factors.enumerate() {
-      let piece = grouped(factor, 2)
+      let rendered-factor = render-with-grouping(factor, 2)
       if index == 0 {
-        rendered.push(piece)
-      } else if shows-a-number(term.factors.at(index - 1)) and shows-a-number(factor) {
-        rendered.push($dot.op #piece$)
+        rendered-factors.push(rendered-factor)
+      } else if (
+        shows-a-number(term.factors.at(index - 1))
+          and shows-a-number(factor)
+      ) {
+        rendered-factors.push($dot.op #rendered-factor$)
       } else {
-        rendered.push($thin #piece$)
+        rendered-factors.push($thin #rendered-factor$)
       }
     }
-    return rendered.join()
+    return rendered-factors.join()
   }
 
-  if kind == "ratio" {
-    return $(#render(term.numerator)) / (#render(term.denominator))$
+  if term-kind == "ratio" {
+    return $(#render-term(term.numerator)) / (#render-term(term.denominator))$
   }
 
-  if kind == "power" {
-    return $#grouped(term.base, 4)^#render(term.exponent)$
+  if term-kind == "power" {
+    return $#render-with-grouping(term.base, 4)^#render-term(term.exponent)$
   }
 
-  if kind == "function" {
-    let name = if term.name == "sin" { $sin$ } else if term.name == "cos" { $cos$ } else { $tan$ }
-    return $#name #grouped(term.argument, 3)$
+  if term-kind == "function" {
+    let function-name = if term.name == "sin" {
+      $sin$
+    } else if term.name == "cos" {
+      $cos$
+    } else {
+      $tan$
+    }
+    return $#function-name #render-with-grouping(term.argument, 3)$
   }
 
-  panic("typed-physics: cannot render expression of kind " + repr(kind))
+  panic("typed-physics: cannot render expression of kind " + repr(term-kind))
 }
 
 #let numeric-math-of(term, digits: 3) = {
-  let value = value-of(term)
-  if value == none { return none }
-  $#format-number(value, digits: digits)$
+  let evaluated-value = value-of(term)
+  if evaluated-value == none { return none }
+  $#format-number(evaluated-value, digits: digits)$
 }

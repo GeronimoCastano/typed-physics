@@ -2,95 +2,376 @@
 // else from it.
 //
 // `situation(...)` takes the problem statement as elements that read like the
-// sentence they came from, resolves them into geometry, and hands back the
-// views of that one declaration: the scene, a free-body diagram of any body,
-// the weight resolved into the surface's axes, and the solution. They cannot
-// disagree with each other, because there is only one situation underneath.
+// sentence they came from and resolves them into geometry. Every view is a
+// function taking that situation first: the scene, a free-body diagram of any
+// body, the weight resolved into the surface's axes, and the solution. They
+// cannot disagree with each other, because there is only one situation
+// underneath.
 
 #import "@preview/cetz:0.5.2"
 #import "placement.typ"
-#import "render.typ"
-#import "fbd.typ"
+#import "render.typ" as scene-rendering
+#import "fbd.typ" as free-body-rendering
 #import "solver.typ"
 #import "report.typ"
-#import "forces.typ"
+#import "forces.typ" as force-enumeration
+#import "annotations.typ": dimension
+#import "validation.typ"
 
-#import "elements.typ": block, ceiling, force, ground, ramp, wall
-#import "style.typ": resolve-style, scaled-diagram, theme
-
-#let chosen-body(arguments) = {
-  let given = arguments.pos()
-  assert(
-    given.len() <= 1,
-    message: "typed-physics: this view takes at most one positional argument, the name of a body",
-  )
-  if given.len() == 1 { given.first() } else { auto }
-}
+#import "elements.typ": (
+  angular-velocity, arc, ball, block, ceiling, disk, force, ground, pendulum,
+  pivot, point-mass, pulley, ramp, ring, rod, rope, spring, support, torque,
+  velocity, wall,
+)
+#import "style.typ": (
+  block-style, connector-style, force-style, resolve-body-style, resolve-style,
+  scaled-diagram, surface-style, theme,
+)
 
 #let situation(..declarations, gravity: 9.81, style: (:)) = {
-  let scene = placement.resolve(declarations.pos(), gravity: gravity)
-  let situation-style = style
-  let styled(overrides) = resolve-style(situation-style + overrides)
-  let drawn(th, elements) = scaled-diagram(th, cetz.canvas(elements))
-  let solved(body, assume) = solver.solve-situation(scene, body: body, assume: assume)
-
-  (
-    scene: (labels: "name", angles: "value", loads: true, style: (:)) => {
-      let th = styled(style)
-      drawn(th, render.draw-scene(scene, th, labels: labels, angles: angles, loads: loads))
-    },
-
-    fbd: (name, axes: auto, outline: true, solve: true, style: (:)) => {
-      let th = styled(style)
-      let solution = if solve { solver.solve-body(scene, name) } else { none }
-      let usable = if solution != none and solution.status == "solved" { solution } else { none }
-      drawn(th, fbd.draw-fbd(scene, name, th, solution: usable, axes: axes, outline: outline))
-    },
-
-    components: (name, of: "weight", style: (:)) => {
-      let th = styled(style)
-      drawn(th, fbd.draw-components(scene, name, th, of: of))
-    },
-
-    // A situation with one body needs no name; naming it is how a situation
-    // with several says which one it means.
-    solve: (..name, assume: auto) => report.solution-report(scene, solved(chosen-body(name), assume)),
-
-    steps: (..name, assume: auto) => report.solution-report(scene, solved(chosen-body(name), assume), steps: true),
-
-    table: (..name, assume: auto) => {
-      let solution = solved(chosen-body(name), assume)
-      report.force-table(scene, solution.body, solution: if solution.status == "solved" { solution } else { none })
-    },
-
-    results: (..name, assume: auto) => solved(chosen-body(name), assume),
-
-    forces: name => forces.enumerate-forces(scene, name),
-
-    // The scene as CeTZ elements, for drawing on top of it inside a canvas of
-    // your own. Every body and surface is a named group, so `("A.center")` and
-    // `("incline.apex")` are addressable coordinates.
-    draw: (labels: "name", angles: "value", loads: true, style: (:)) => render.draw-scene(
-      scene,
-      styled(style),
-      labels: labels,
-      angles: angles,
-      loads: loads,
-    ),
-
-    placed: scene,
+  let validated-style = resolve-style(style)
+  placement.resolve-situation-geometry(
+    declarations.pos(),
+    gravity: gravity,
+  ) + (
+    style: style,
+    validation-kind: "typed-physics-situation",
   )
 }
 
-// Typst can only call a closure stored in a dictionary through an extra pair of
-// parentheses — `(s.fbd)("A")`. These read the same way round and spare the
-// reader that detail.
+#let _validate-situation(s, public-function) = {
+  assert(
+    type(s) == dictionary
+      and s.at("validation-kind", default: none)
+        == "typed-physics-situation",
+    message: (
+      "typed-physics: "
+        + public-function
+        + " needs the value returned by situation() as its first argument"
+    ),
+  )
+  let required-fields = (
+    "gravity", "surfaces", "bodies", "pulleys", "structures", "torques",
+    "connectors", "surface-order", "body-order", "structure-order", "span",
+    "style",
+  )
+  let missing-fields = required-fields.filter(field => field not in s)
+  assert(
+    missing-fields.len() == 0,
+    message: (
+      "typed-physics: "
+        + public-function
+        + " received a malformed situation missing "
+        + missing-fields.join(", ")
+        + "; pass the unchanged value returned by situation()"
+    ),
+  )
+}
 
-#let scene(s, ..arguments) = (s.scene)(..arguments)
-#let fbd(s, name, ..arguments) = (s.fbd)(name, ..arguments)
-#let components(s, name, ..arguments) = (s.components)(name, ..arguments)
-#let solve(s, ..arguments) = (s.solve)(..arguments)
-#let steps(s, ..arguments) = (s.steps)(..arguments)
-#let force-table(s, ..arguments) = (s.table)(..arguments)
-#let results(s, ..arguments) = (s.results)(..arguments)
-#let draw(s, ..arguments) = (s.draw)(..arguments)
+// A situation's own style is the floor every view builds on; a view's overrides
+// are merged over it and apply to that view alone.
+#let _view-style(s, view-style, public-function: "view") = {
+  _validate-situation(s, public-function)
+  validation.validate-style-dictionary(view-style, public-function)
+  resolve-style(s.style + view-style)
+}
+
+#let _canvas(diagram-style, canvas-elements) = scaled-diagram(
+  diagram-style,
+  cetz.canvas(canvas-elements),
+)
+
+// A situation with one body needs no name; naming it is how a situation with
+// several says which one it means.
+#let _chosen-body(s, arguments, public-function) = {
+  let positional-body-names = arguments.pos()
+  assert(
+    arguments.named().len() == 0,
+    message: (
+      "typed-physics: "
+        + public-function
+        + " has unknown named argument"
+        + if arguments.named().len() == 1 { " " } else { "s " }
+        + arguments.named().keys().map(key => "`" + key + ":`").join(", ")
+        + "; pass the body name positionally"
+    ),
+  )
+  assert(
+    positional-body-names.len() <= 1,
+    message: "typed-physics: this view takes at most one positional argument, the name of a body",
+  )
+  if positional-body-names.len() == 1 {
+    let body-name = positional-body-names.first()
+    validation.validate-body-name(s, body-name, public-function)
+    body-name
+  } else {
+    auto
+  }
+}
+
+#let _solved-body(s, name, assume) = solver.solve-situation(
+  s,
+  body: name,
+  assume: assume,
+)
+
+// ── Figures ──────────────────────────────────────────────────────────────────
+
+// A body whose forces are drawn in place is solved the same way it would be in
+// a diagram of its own, so the arrows agree with `fbd` and with `solve`.
+#let _solution-for-arrows(s, body-name) = {
+  if not solver.body-can-be-balanced(s, body-name) { return none }
+  let solution = solver.solve-body(s, body-name)
+  if solution.status == "solved" { solution } else { none }
+}
+
+#let _weight-arrow-distance-from-body-center(
+  s,
+  body-name,
+  arrow-lengths,
+  solution,
+  diagram-style,
+) = {
+  let acting-forces = force-enumeration.enumerate-forces(
+    s,
+    body-name,
+    solution: solution,
+  )
+  let weight-force-index = acting-forces.position(
+    acting-force => acting-force.role == "weight",
+  )
+  assert(
+    weight-force-index != none,
+    message: "typed-physics: components: body \"" + body-name + "\" needs a `mass:` before its weight can be resolved",
+  )
+  let weight-force = acting-forces.at(weight-force-index)
+  let body = s.bodies.at(body-name)
+  let body-style = resolve-body-style(diagram-style, body.style)
+  scene-rendering.body-visible-boundary-distance(
+    body,
+    weight-force.direction,
+    body-style.stroke,
+  ) + arrow-lengths.at(weight-force-index)
+}
+
+#let _validate-weight-components(s, body-name, public-function) = {
+  validation.validate-body-name(s, body-name, public-function)
+  let body = s.bodies.at(body-name)
+  assert(
+    body.mass != none,
+    message: (
+      "typed-physics: "
+        + public-function
+        + " needs body \""
+        + body-name
+        + "\" to declare `mass:` before its weight can be resolved"
+    ),
+  )
+  assert(
+    body.support != none,
+    message: (
+      "typed-physics: "
+        + public-function
+        + " cannot resolve weight for body \""
+        + body-name
+        + "\" because it has no supporting surface frame; use a body placed with `on:`/`touching:`"
+    ),
+  )
+}
+
+#let draw(
+  s,
+  labels: "name",
+  angles: "value",
+  loads: true,
+  frictions: false,
+  lengths: false,
+  dimensions: (),
+  forces: none,
+  components: none,
+  style: (:),
+) = {
+  _validate-situation(s, "draw()")
+  validation.validate-boolean(loads, "draw()", "loads")
+  validation.validate-boolean(frictions, "draw()", "frictions")
+  validation.validate-boolean(lengths, "draw()", "lengths")
+  let diagram-style = _view-style(s, style, public-function: "draw()")
+  let bodies-showing-forces = scene-rendering.bodies-named-by(s, forces)
+  let bodies-showing-components = scene-rendering.bodies-named-by(
+    s,
+    components,
+    argument-name: "components",
+  )
+  let solutions = (:)
+  let arrow-lengths = (:)
+  for body-name in bodies-showing-forces {
+    let solution = _solution-for-arrows(s, body-name)
+    solutions.insert(body-name, solution)
+    arrow-lengths.insert(
+      body-name,
+      free-body-rendering.force-arrow-lengths(
+        force-enumeration.enumerate-forces(s, body-name, solution: solution),
+        diagram-style,
+      ),
+    )
+  }
+  for body-name in bodies-showing-components {
+    _validate-weight-components(s, body-name, "draw(components:)")
+  }
+  scene-rendering.render-scene(
+    s,
+    diagram-style,
+    labels: labels,
+    angles: angles,
+    loads: loads,
+    frictions: frictions,
+    lengths: lengths,
+    dimensions: dimensions,
+    forces: forces,
+    force-arrow-lengths: arrow-lengths,
+    solutions: solutions,
+  )
+  for body-name in bodies-showing-components {
+    let forces-already-show-weight = bodies-showing-forces.contains(body-name)
+    let component-weight-arrow-length = if forces-already-show-weight {
+      _weight-arrow-distance-from-body-center(
+        s,
+        body-name,
+        arrow-lengths.at(body-name),
+        solutions.at(body-name),
+        diagram-style,
+      )
+    } else {
+      auto
+    }
+    free-body-rendering.render-component-decomposition-on-body(
+      s,
+      body-name,
+      diagram-style,
+      weight-arrow-length: component-weight-arrow-length,
+      should-render-weight-arrow: not forces-already-show-weight,
+    )
+  }
+}
+
+#let scene(s, ..arguments) = {
+  _validate-situation(s, "scene()")
+  assert(
+    arguments.pos().len() == 0,
+    message: "typed-physics: scene() takes no positional arguments after the situation",
+  )
+  let allowed-arguments = (
+    "labels", "angles", "loads", "frictions", "lengths", "dimensions",
+    "forces", "components", "style",
+  )
+  for argument-name in arguments.named().keys() {
+    assert(
+      argument-name in allowed-arguments,
+      message: (
+        "typed-physics: scene() has unknown argument `"
+          + argument-name
+          + ":`; accepted arguments are "
+          + allowed-arguments.join(", ")
+      ),
+    )
+  }
+  let diagram-style = _view-style(
+    s,
+    arguments.named().at("style", default: (:)),
+    public-function: "scene()",
+  )
+  _canvas(diagram-style, draw(s, ..arguments))
+}
+
+#let fbd(s, name, axes: auto, outline: true, solve: true, style: (:)) = {
+  _validate-situation(s, "fbd()")
+  validation.validate-body-name(s, name, "fbd()")
+  validation.validate-boolean(axes, "fbd()", "axes", allow-auto: true)
+  validation.validate-boolean(outline, "fbd()", "outline")
+  validation.validate-boolean(solve, "fbd()", "solve")
+  let diagram-style = _view-style(s, style, public-function: "fbd()")
+  _canvas(
+    diagram-style,
+    free-body-rendering.render-free-body-diagram(
+      s,
+      name,
+      diagram-style,
+      solution: if solve { _solution-for-arrows(s, name) } else { none },
+      axes: axes,
+      outline: outline,
+    ),
+  )
+}
+
+#let components(s, name, of: "weight", style: (:)) = {
+  _validate-situation(s, "components()")
+  _validate-weight-components(s, name, "components()")
+  validation.validate-enum(of, ("weight",), "components()", "of")
+  let diagram-style = _view-style(s, style, public-function: "components()")
+  _canvas(
+    diagram-style,
+    free-body-rendering.render-component-decomposition(s, name, diagram-style, of: of),
+  )
+}
+
+// ── Answers ──────────────────────────────────────────────────────────────────
+
+#let solve(s, ..name, find: auto, direction: true, assume: auto) = {
+  _validate-situation(s, "solve()")
+  validation.validate-enum(
+    find,
+    (auto, "acceleration", "normal", "friction", "regime"),
+    "solve()",
+    "find",
+  )
+  validation.validate-boolean(direction, "solve()", "direction")
+  validation.validate-enum(
+    assume,
+    (auto, "static", "sliding"),
+    "solve()",
+    "assume",
+  )
+  report.typeset-answer(
+    s,
+    _solved-body(s, _chosen-body(s, name, "solve()"), assume),
+    find: find,
+    direction: direction,
+  )
+}
+
+#let force-table(s, ..name, assume: auto) = {
+  _validate-situation(s, "force-table()")
+  validation.validate-enum(
+    assume,
+    (auto, "static", "sliding"),
+    "force-table()",
+    "assume",
+  )
+  let solution = _solved-body(
+    s,
+    _chosen-body(s, name, "force-table()"),
+    assume,
+  )
+  report.typeset-force-table(
+    s,
+    solution.body,
+    solution: if solution.status == "solved" { solution } else { none },
+  )
+}
+
+#let results(s, ..name, assume: auto) = {
+  _validate-situation(s, "results()")
+  validation.validate-enum(
+    assume,
+    (auto, "static", "sliding"),
+    "results()",
+    "assume",
+  )
+  _solved-body(s, _chosen-body(s, name, "results()"), assume)
+}
+
+#let forces(s, name) = {
+  _validate-situation(s, "forces()")
+  validation.validate-body-name(s, name, "forces()")
+  force-enumeration.enumerate-forces(s, name)
+}

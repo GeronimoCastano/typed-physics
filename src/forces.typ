@@ -13,25 +13,54 @@
 // The component of a load along and out of the surface its body rests on.
 // A load that lies on one of the surface's own axes contributes exactly, not
 // through a cosine of zero, so a horizontal push on level ground stays `F`.
-#let components-of(load, body) = {
-  let relative = load.inclination - body.inclination
-  let on-axis = calc.abs(calc.rem(relative.deg(), 90)) < 1e-9
-  let angle-to-surface = expression.declared-angle(relative, $phi$)
-  if on-axis {
+#let resolve-load-components-in-surface-frame(applied-load, body) = {
+  let load-angle-relative-to-surface = (
+    applied-load.inclination - body.inclination
+  )
+  let load-is-axis-aligned = (
+    calc.abs(calc.rem(load-angle-relative-to-surface.deg(), 90)) < 1e-9
+  )
+  let relative-angle-quantity = expression.declared-angle(
+    load-angle-relative-to-surface,
+    $phi$,
+  )
+  if load-is-axis-aligned {
     return (
-      along: expression.product(load.magnitude, expression.number(calc.round(calc.cos(relative), digits: 6))),
-      normal: expression.product(load.magnitude, expression.number(calc.round(calc.sin(relative), digits: 6))),
+      along: expression.product(
+        applied-load.magnitude,
+        expression.number(
+          calc.round(
+            calc.cos(load-angle-relative-to-surface),
+            digits: 6,
+          ),
+        ),
+      ),
+      normal: expression.product(
+        applied-load.magnitude,
+        expression.number(
+          calc.round(
+            calc.sin(load-angle-relative-to-surface),
+            digits: 6,
+          ),
+        ),
+      ),
     )
   }
   (
-    along: expression.product(load.magnitude, expression.cosine(angle-to-surface)),
-    normal: expression.product(load.magnitude, expression.sine(angle-to-surface)),
+    along: expression.product(
+      applied-load.magnitude,
+      expression.cosine(relative-angle-quantity),
+    ),
+    normal: expression.product(
+      applied-load.magnitude,
+      expression.sine(relative-angle-quantity),
+    ),
   )
 }
 
-#let load-symbol(load, index, count) = {
-  if load.label != auto { return load.label }
-  if count <= 1 { $F$ } else { $F_#(index + 1)$ }
+#let applied-load-symbol(applied-load, load-index, applied-load-count) = {
+  if applied-load.label != auto { return applied-load.label }
+  if applied-load-count <= 1 { $F$ } else { $F_#(load-index + 1)$ }
 }
 
 // The forces acting on one body, in the order a reader expects to meet them.
@@ -40,49 +69,97 @@
 // enumerated, with their magnitudes left unknown.
 #let enumerate-forces(scene, name, solution: none) = {
   let body = scene.bodies.at(name)
-  let forces = ()
+  let acting-forces = ()
 
   if body.mass != none {
-    forces.push((
+    acting-forces.push((
       role: "weight",
       symbol: $W$,
       direction: (0, -1),
       magnitude: expression.product(body.mass, scene.gravity),
       applied-at: body.center,
+      style: (:),
+    ))
+  }
+
+  // A body held up by something other than a surface still has a force holding
+  // it up, and the free-body diagram is entitled to show it even though its
+  // magnitude waits on a solve this package does not attempt.
+  if body.hangs-from != none {
+    acting-forces.push((
+      role: "tension",
+      symbol: $T$,
+      direction: vector.normalized(
+        vector.subtract(body.hangs-from, body.center),
+      ),
+      magnitude: none,
+      applied-at: body.center,
+      style: (:),
     ))
   }
 
   if body.support != none {
-    forces.push((
+    acting-forces.push((
       role: "normal",
       symbol: $N$,
       direction: body.outward-normal,
       magnitude: if solution == none { none } else { solution.normal.expression },
       applied-at: body.contact,
+      style: (:),
     ))
 
-    if body.friction != none {
-      let sliding = solution != none and solution.regime == "sliding"
-      forces.push((
+    // A contact that turns out to need no friction is not exerting any, so
+    // nothing is drawn for it once the body has been balanced.
+    let friction-force-acts = (
+      body.friction != none
+        and (
+          solution == none
+            or solution.friction.value == none
+            or calc.abs(solution.friction.value) > 1e-9
+        )
+    )
+    if friction-force-acts {
+      let body-is-sliding = solution != none and solution.regime == "sliding"
+      acting-forces.push((
         role: "friction",
-        symbol: if solution == none { $f$ } else if sliding { $f_k$ } else { $f_s$ },
-        direction: if solution == none { body.direction } else { solution.friction.direction },
-        magnitude: if solution == none { none } else { solution.friction.expression },
+        symbol: if solution == none {
+          $f$
+        } else if body-is-sliding {
+          $f_k$
+        } else {
+          $f_s$
+        },
+        direction: if solution == none {
+          body.direction
+        } else {
+          solution.friction.direction
+        },
+        magnitude: if solution == none {
+          none
+        } else {
+          solution.friction.expression
+        },
         applied-at: body.contact,
+        style: (:),
       ))
     }
   }
 
-  let count = body.loads.len()
-  for (index, load) in body.loads.enumerate() {
-    forces.push((
+  let applied-load-count = body.loads.len()
+  for (load-index, applied-load) in body.loads.enumerate() {
+    acting-forces.push((
       role: "applied",
-      symbol: load-symbol(load, index, count),
-      direction: load.direction,
-      magnitude: load.magnitude,
+      symbol: applied-load-symbol(
+        applied-load,
+        load-index,
+        applied-load-count,
+      ),
+      direction: applied-load.direction,
+      magnitude: applied-load.magnitude,
       applied-at: body.center,
+      style: applied-load.style,
     ))
   }
 
-  forces
+  acting-forces
 }

@@ -8,4 +8,4 @@
   block("A", mass: 4, on: "incline", at: 55%, mu: (s: 0.40, k: 0.30)),
 )
 
-#scene(s, labels: "both", angles: "both")
+#scene(s, labels: "both", angles: "both", frictions: true, lengths: true)
