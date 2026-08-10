@@ -2,9 +2,9 @@
 
 ![Block on a rough incline](assets/readme/incline.png)
 
-Describe the situation once. The figure, the free-body diagram, the equations,
-and the answer are all derived from it — and they cannot disagree with each
-other.
+Describe the physics once. Mechanics figures, free-body diagrams, and solutions,
+as well as semantic DC circuit diagrams, are derived from declarations instead
+of hand-placed drawing commands.
 
 ```typst
 #import "@preview/typed-physics:0.1.0": *
@@ -61,6 +61,128 @@ hands you the numbers to write about:
 #answer.required.value    // 19.6 — the friction the situation needs
 #answer.available.value   // 13.6 — the most this contact can supply
 ```
+
+## Electrical circuits from connectivity
+
+The `electricity` namespace draws DC resistor and capacitor circuits from their
+physical series and parallel relationships. Components do not take coordinates,
+wire paths, rotations, or arrow positions.
+
+```typst
+#import "@preview/typed-physics:0.1.0": electricity as e
+
+#let circuit = e.dc-circuit(
+  e.voltage-source("V", voltage: 12),
+  e.series(
+    e.resistor("R1", resistance: 4),
+    e.parallel(
+      e.resistor("R2", resistance: 6),
+      e.capacitor("C1", capacitance: 220, unit: "µF"),
+    ),
+  ),
+)
+
+#e.diagram(circuit)
+```
+
+`series(...)` and `parallel(...)` may be nested to any depth. The layout engine
+allocates branch widths, vertical clearances, split and join wires, junction
+dots, labels, and the source return path from that topology. Parallel branches
+are stacked by default. A branch may instead declare how it travels between the
+split and join nodes, and the declared routes together give the network a
+frame — `"direct"` runs straight across, `"over"` and `"under"` turn at the
+corner above or below it:
+
+```typst
+#let triangle = e.dc-circuit(
+  e.voltage-source("V", voltage: 12),
+  e.parallel(
+    e.resistor("R1", resistance: 10, route: "direct"),
+    e.series(
+      e.resistor("R2", resistance: 20),
+      e.resistor("R3", resistance: 30),
+      route: "over",
+    ),
+  ),
+)
+#e.diagram(triangle, labels: "value")
+```
+
+A frame bulging to one side keeps its split and join level, so the routed
+branch peaks midway. A frame carrying branches on both sides has no room for
+that, so its split and join separate vertically and each routed branch turns at
+a corner. Every branch still joins the same two electrical nodes; `route:`
+changes only where they are drawn.
+
+A DC circuit is a loop, and its return rail is a place to put components rather
+than a bare wire. A `series` load is split between the two rails so they come
+out as close in width as the branches allow, instead of running the whole load
+right and returning along an empty wire. A parallel network anchors the
+outgoing rail, so it is the branches after it that move; a load with no
+parallel network splits wherever the rails balance, which puts two resistors in
+series one above the other:
+
+```typst
+#let circuit = e.dc-circuit(
+  e.voltage-source("V", voltage: 18),
+  e.series(
+    e.resistor("R100", resistance: 100),
+    e.parallel(
+      e.resistor("R300", resistance: 300, route: "under"),
+      e.resistor("R200", resistance: 200, route: "direct"),
+      e.series(
+        e.resistor("R50", resistance: 50),
+        e.resistor("R250", resistance: 250),
+        route: "over",
+      ),
+    ),
+    e.resistor("R150", resistance: 150),
+  ),
+)
+
+#e.diagram(circuit, labels: "value")
+```
+
+Nothing in that declaration selects a rail. A load that already descends closes
+along its own exit level, so here the return rail and the frame's lower edge
+are the same line. Pass `fold: false` to keep the whole load on one
+rail, or `fold: true` to require a split and be told when a load has none
+available.
+
+Because the source spans a component length down the left edge, a load only one
+component wide per rail would close as a tall narrow loop. The loop is never
+drawn narrower than `minimum-loop-width`, and width added that way is split
+evenly so the runs stay centred on their rails. Raise it to spread a small
+circuit out — `style: (minimum-loop-width: 8)` — or lower it to let one close
+tightly. Loops already wider than the floor are unaffected.
+
+Circuit-wide styling belongs on `dc-circuit(style:)` or `diagram(style:)`.
+Individual components take `resistor-style(...)`, `capacitor-style(...)`, or
+`voltage-source-style(...)`. Zigzag resistors, conventional parallel-plate
+capacitors, and a long/short-plate battery symbol are the defaults;
+`symbol: "rectangle"` and `symbol: "circle"` select the IEC resistor and
+circular source for one component. Each rendered component exposes `start`,
+`end`, `center`, and `default` CeTZ anchors; capacitors additionally expose
+`first-plate` and `second-plate`, while a voltage source exposes `positive` and
+`negative`.
+
+Numeric values use ohms, farads, and volts by default. `unit:` replaces the
+displayed unit without converting or solving the value, so prefixes can be
+stated directly:
+
+```typst
+#e.resistor("sensor", resistance: 12, unit: "µΩ")
+#e.capacitor("coupling", capacitance: 220, unit: "nF")
+#e.voltage-source("bias", voltage: 750, unit: "µV")
+```
+
+This release deliberately draws but does not solve circuits. It supports one
+ideal DC voltage source and a two-terminal network of ideal resistors and
+capacitors. Ohm's law, equivalent values, charge, currents, voltage drops,
+transients, impedance, power, arbitrary node graphs, bridge networks, and
+nonlinear elements remain future electrical solver work. `route:` and the return
+rail choose how a declared topology is drawn; they do not change what is
+connected to what.
 
 ## Declaring a situation
 
@@ -448,6 +570,10 @@ number of applied loads, and nothing else.
   They are drawing-only declarations.
 - No circular-motion solution for curved tracks, rolling dynamics for disks or
   rings, or pendulum dynamics. Their geometry is available in `scene()`.
+- Electrical circuits are drawing-only. The first release supports one ideal DC
+  source and any two-terminal resistor and capacitor network `series` and
+  `parallel` can compose; it does not solve Ohm's law or capacitor transients,
+  and it cannot draw topologies outside that grammar, such as a bridge.
 
 A body the solver cannot take still draws: its figure and its free-body diagram
 come from the declaration, not from an answer.

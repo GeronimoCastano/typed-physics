@@ -121,6 +121,178 @@
 } else if selected-case == "unsupported-solver-body" {
   let s = situation(ground(), disk("D", mass: 1, on: "ground"))
   solve(s)
+} else if selected-case == "electrical-invalid-resistance" {
+  electricity.resistor("R", resistance: 0)
+} else if selected-case == "electrical-invalid-capacitance" {
+  electricity.capacitor("C", capacitance: 0)
+} else if selected-case == "electrical-capacitor-unit" {
+  electricity.capacitor("C", capacitance: 1, unit: 3)
+} else if selected-case == "electrical-capacitor-label" {
+  electricity.capacitor("C", capacitance: 1, label: 3)
+} else if selected-case == "electrical-empty-series" {
+  electricity.series(electricity.resistor("R"))
+} else if selected-case == "electrical-duplicate-name" {
+  electricity.dc-circuit(
+    electricity.voltage-source("shared", voltage: 9),
+    electricity.resistor("shared", resistance: 4),
+  )
+} else if selected-case == "electrical-source-in-load" {
+  electricity.dc-circuit(
+    electricity.voltage-source("V1", voltage: 9),
+    electricity.series(
+      electricity.resistor("R", resistance: 4),
+      electricity.voltage-source("V2", voltage: 3),
+    ),
+  )
+} else if selected-case == "electrical-style-key" {
+  electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 9),
+    electricity.resistor("R", resistance: 4),
+    style: (wire-color: red),
+  )
+} else if selected-case == "electrical-invalid-unit" {
+  electricity.resistor("R", resistance: 4, unit: 3)
+} else if selected-case == "electrical-resistor-symbol" {
+  electricity.resistor(
+    "R",
+    resistance: 4,
+    style: electricity.resistor-style(symbol: "circle"),
+  )
+} else if selected-case == "electrical-source-symbol" {
+  electricity.voltage-source(
+    "V",
+    voltage: 9,
+    style: electricity.voltage-source-style(symbol: "zigzag"),
+  )
+} else if selected-case == "electrical-capacitor-style" {
+  electricity.capacitor(
+    "C",
+    capacitance: 1,
+    style: (fill: red),
+  )
+} else if selected-case == "electrical-capacitor-stroke" {
+  electricity.capacitor(
+    "C",
+    capacitance: 1,
+    style: electricity.capacitor-style(stroke: "thick"),
+  )
+} else if selected-case == "electrical-capacitor-text" {
+  electricity.capacitor(
+    "C",
+    capacitance: 1,
+    style: electricity.capacitor-style(text: "large"),
+  )
+} else if selected-case == "electrical-diagram-symbol" {
+  electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 9),
+    electricity.resistor("R", resistance: 4),
+    style: (resistor-symbol: "coil"),
+  )
+} else if selected-case == "electrical-minimum-loop-width" {
+  electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 9),
+    electricity.resistor("R", resistance: 4),
+    style: (minimum-loop-width: 0),
+  )
+} else if selected-case == "electrical-frame-rise" {
+  electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 9),
+    electricity.resistor("R", resistance: 4),
+    style: (frame-rise: 0),
+  )
+} else if selected-case == "electrical-capacitor-gap" {
+  electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 9),
+    electricity.capacitor("C", capacitance: 1),
+    style: (capacitor-plate-gap: 0),
+  )
+} else if selected-case == "electrical-capacitor-height" {
+  electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 9),
+    electricity.capacitor("C", capacitance: 1),
+    style: (capacitor-plate-height: 0),
+  )
+} else if selected-case == "electrical-capacitor-gap-too-wide" {
+  electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 9),
+    electricity.capacitor("C", capacitance: 1),
+    style: (component-length: 1, capacitor-plate-gap: 2),
+  )
+} else if selected-case == "electrical-fold-value" {
+  electricity.diagram(
+    electricity.dc-circuit(
+      electricity.voltage-source("V", voltage: 9),
+      electricity.series(
+        electricity.resistor("R1", resistance: 1),
+        electricity.resistor("R2", resistance: 2),
+      ),
+    ),
+    fold: "yes",
+  )
+} else if selected-case == "electrical-fold-unavailable" {
+  electricity.diagram(
+    electricity.dc-circuit(
+      electricity.voltage-source("V", voltage: 9),
+      electricity.resistor("R1", resistance: 1),
+    ),
+    fold: true,
+  )
+} else if selected-case == "electrical-fold-trailing-missing" {
+  electricity.diagram(
+    electricity.dc-circuit(
+      electricity.voltage-source("V", voltage: 9),
+      electricity.series(
+        electricity.resistor("R1", resistance: 1),
+        electricity.parallel(
+          electricity.resistor("R2", resistance: 2),
+          electricity.resistor("R3", resistance: 3),
+        ),
+      ),
+    ),
+    fold: true,
+  )
+} else if selected-case == "electrical-route-value" {
+  electricity.resistor("R", resistance: 4, route: "sideways")
+} else if selected-case == "electrical-route-partial" {
+  electricity.parallel(
+    electricity.resistor("R1", resistance: 1, route: "direct"),
+    electricity.resistor("R2", resistance: 2),
+  )
+} else if selected-case == "electrical-route-repeated" {
+  electricity.parallel(
+    electricity.resistor("R1", resistance: 1, route: "direct"),
+    electricity.resistor("R2", resistance: 2, route: "direct"),
+  )
+} else if selected-case == "electrical-route-nested-branch" {
+  electricity.parallel(
+    electricity.resistor("R1", resistance: 1, route: "direct"),
+    electricity.series(
+      electricity.resistor("R2", resistance: 2),
+      electricity.parallel(
+        electricity.resistor("R3", resistance: 3),
+        electricity.resistor("R4", resistance: 4),
+      ),
+      route: "over",
+    ),
+  )
+} else if selected-case == "electrical-route-corner-crowded" {
+  electricity.parallel(
+    electricity.resistor("R1", resistance: 1, route: "direct"),
+    electricity.series(
+      electricity.resistor("R2", resistance: 2),
+      electricity.resistor("R3", resistance: 3),
+      electricity.resistor("R4", resistance: 4),
+      route: "over",
+    ),
+  )
+} else if selected-case == "electrical-route-outside-parallel" {
+  electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 9),
+    electricity.series(
+      electricity.resistor("R1", resistance: 1, route: "direct"),
+      electricity.resistor("R2", resistance: 2),
+    ),
+  )
 } else {
   panic("diagnostic harness: unknown case " + repr(selected-case))
 }

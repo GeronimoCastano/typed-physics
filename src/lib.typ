@@ -17,6 +17,7 @@
 #import "forces.typ" as force-enumeration
 #import "annotations.typ": dimension
 #import "validation.typ"
+#import "electricity/lib.typ" as electricity
 
 #import "elements.typ": (
   angular-velocity, arc, ball, block, ceiling, disk, force, ground, pendulum,

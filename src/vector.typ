@@ -64,3 +64,9 @@
   add(first-point, second-point),
   0.5,
 )
+
+// The point a given fraction of the way from one point to another.
+#let lerp(start-point, end-point, fraction) = add(
+  start-point,
+  scale(subtract(end-point, start-point), fraction),
+)

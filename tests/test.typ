@@ -1261,6 +1261,497 @@ The declaration changes in one place; every view follows.
   scene(s, forces: ("L", "R"))
 })
 
+#pagebreak()
 
+== Semantic electrical circuit diagrams
 
-Hello.
+#let e = electricity
+
+#section("A series-parallel circuit is laid out from connectivity", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("V", voltage: 12),
+    e.series(
+      e.resistor("R1", resistance: 4),
+      e.parallel(
+        e.resistor("R2", resistance: 6),
+        e.resistor("R3", resistance: 3),
+      ),
+    ),
+  )
+  e.diagram(circuit)
+})
+
+#section("Nested branches remain coordinate-free", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("supply", voltage: 9),
+    e.parallel(
+      e.series(
+        e.resistor("R1", resistance: 2),
+        e.resistor("R2", resistance: 5),
+      ),
+      e.resistor("R3", resistance: 8),
+      e.series(
+        e.resistor("R4", resistance: 3),
+        e.parallel(
+          e.resistor("R5", resistance: 6),
+          e.resistor("R6", resistance: 12),
+        ),
+      ),
+    ),
+  )
+  e.diagram(circuit, style: (scale: 0.82))
+})
+
+#pagebreak()
+
+== Routed branches shape a parallel network
+
+#section("A direct branch beside a two-resistor path over the top", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("V", voltage: 12),
+    e.parallel(
+      e.resistor("R1", resistance: 10, route: "direct"),
+      e.series(
+        e.resistor("R2", resistance: 20),
+        e.resistor("R3", resistance: 30),
+        route: "over",
+      ),
+    ),
+  )
+  e.diagram(circuit)
+})
+
+#section("The same topology uses the orthogonal layout by default", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("V", voltage: 12),
+    e.parallel(
+      e.resistor("R1", resistance: 10),
+      e.series(
+        e.resistor("R2", resistance: 20),
+        e.resistor("R3", resistance: 30),
+      ),
+    ),
+  )
+  e.diagram(circuit)
+})
+
+#section("Diagram and component styles remain independent", {
+  let circuit = e.dc-circuit(
+    e.voltage-source(
+      "battery",
+      voltage: 6,
+      style: e.voltage-source-style(
+        symbol: "circle",
+        fill: rgb("#FFF3BF"),
+      ),
+    ),
+    e.series(
+      e.resistor(
+        "lamp-load",
+        resistance: 7,
+        label: $R_L$,
+        style: e.resistor-style(
+          symbol: "rectangle",
+          fill: rgb("#D0EBFF"),
+          stroke: 1.2pt + blue,
+        ),
+      ),
+      e.resistor("R2", resistance: 5),
+    ),
+    style: (
+      wire-stroke: 1.1pt + rgb("#495057"),
+      junction-fill: blue,
+    ),
+  )
+  e.diagram(circuit, labels: "both")
+})
+
+#pagebreak()
+
+== Electrical units and symbol choices
+
+#section("Unit annotations belong to each physical quantity", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("bias", voltage: 750, unit: "µV"),
+    e.parallel(
+      e.resistor("sensor", resistance: 12, unit: $mu Omega$, route: "direct"),
+      e.series(
+        e.resistor("lead-1", resistance: 2, unit: "mΩ"),
+        e.resistor("lead-2", resistance: 3, unit: "mΩ"),
+        route: "over",
+      ),
+    ),
+  )
+  e.diagram(circuit)
+})
+
+#section("IEC rectangles and a circular source can be selected individually", {
+  let circuit = e.dc-circuit(
+    e.voltage-source(
+      "source",
+      voltage: 5,
+      style: e.voltage-source-style(symbol: "circle"),
+    ),
+    e.series(
+      e.resistor("usual", resistance: 10),
+      e.resistor(
+        "iec",
+        resistance: 20,
+        style: e.resistor-style(symbol: "rectangle"),
+      ),
+    ),
+  )
+  e.diagram(circuit)
+})
+
+#pagebreak()
+
+== Diagonal resistors preserve parallel connectivity
+
+#section("Two direct branches and an outer series path form one parallel network", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("source", voltage: 18),
+    e.series(
+      e.resistor("input", resistance: 100),
+      e.parallel(
+        e.resistor("vertical", resistance: 300, route: "under"),
+        e.resistor("diagonal", resistance: 200, route: "direct"),
+        e.series(
+          e.resistor("upper", resistance: 50),
+          e.resistor("right", resistance: 250),
+          route: "over",
+        ),
+      ),
+      e.resistor("return", resistance: 150),
+    ),
+  )
+  e.diagram(circuit, labels: "value", style: (scale: 0.82))
+})
+
+#pagebreak()
+
+    ),
+  )
+  e.diagram(circuit, labels: "value", style: (scale: 0.82))
+})
+
+#pagebreak()
+
+== A descending frame keeps its corner junctions
+
+#section("The outer circuit leaves the split and join dots directly", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("source", voltage: 18),
+    e.parallel(
+      e.resistor("vertical", resistance: 300, route: "under"),
+      e.resistor("diagonal", resistance: 200, route: "direct"),
+      e.series(
+        e.resistor("top", resistance: 50),
+        e.resistor("right", resistance: 250),
+        route: "over",
+      ),
+    ),
+  )
+  e.diagram(circuit, labels: "value", style: (scale: 0.82))
+})
+
+#pagebreak()
+
+== Zigzag resistors return upward to the outgoing lead
+
+#section("An even number of alternating peaks gives both ends opposite phases", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("source", voltage: 5),
+    e.series(
+      e.resistor("sensor", resistance: 12, unit: $mu Omega$, label: $R_s$),
+      e.resistor("lead", resistance: 3, unit: "mΩ", label: $R_l$),
+    ),
+  )
+  e.diagram(circuit, labels: "both")
+})
+
+#pagebreak()
+
+== Capacitors are semantic two-terminal circuit components
+
+#section("Mixed RC networks use automatic orthogonal placement and farad units", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("source", voltage: 9),
+    e.series(
+      e.resistor("charge", resistance: 2.2, unit: "kΩ", label: $R$),
+      e.parallel(
+        e.capacitor("storage", capacitance: 220, unit: "µF", label: $C_1$),
+        e.capacitor(
+          "timing",
+          capacitance: 47,
+          unit: "nF",
+          label: $C_2$,
+          style: e.capacitor-style(stroke: 1.2pt + blue),
+        ),
+      ),
+    ),
+  )
+  e.diagram(circuit, labels: "both", style: (scale: 0.82))
+})
+
+#section("Capacitor plates and labels rotate with diagonal and vertical branches", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("source", voltage: 5),
+    e.parallel(
+      e.capacitor(
+        "vertical",
+        capacitance: 1,
+        unit: "µF",
+        label: $C_v$,
+        route: "under",
+      ),
+      e.capacitor(
+        "diagonal",
+        capacitance: 2,
+        unit: "µF",
+        label: $C_d$,
+        route: "direct",
+      ),
+      e.series(
+        e.resistor("upper", resistance: 50, label: $R_1$),
+        e.capacitor("right", capacitance: 3, unit: "µF", label: $C_r$),
+        route: "over",
+      ),
+    ),
+  )
+  e.diagram(
+    circuit,
+    labels: "both",
+    style: (scale: 0.72),
+  )
+})
+
+#pagebreak()
+
+== A series load continues onto the return rail
+
+#section("The trailing resistor closes the loop along the bottom instead of widening it", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("source", voltage: 12),
+    e.series(
+      e.resistor("input", resistance: 100),
+      e.parallel(
+        e.resistor("upper", resistance: 300),
+        e.resistor("lower", resistance: 200),
+      ),
+      e.resistor("return", resistance: 150),
+    ),
+  )
+  e.diagram(circuit, labels: "value", style: (scale: 0.82))
+})
+
+#section("The same load on one rail, for comparison", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("flat-source", voltage: 12),
+    e.series(
+      e.resistor("flat-input", resistance: 100),
+      e.parallel(
+        e.resistor("flat-upper", resistance: 300),
+        e.resistor("flat-lower", resistance: 200),
+      ),
+      e.resistor("flat-return", resistance: 150),
+    ),
+  )
+  e.diagram(circuit, labels: "value", fold: false, style: (scale: 0.82))
+})
+
+#pagebreak()
+
+== A descending load closes along its own exit level
+
+#section("Series and parallel composition alone draws the textbook diagonal figure", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("V", voltage: 18),
+    e.series(
+      e.resistor("R100", resistance: 100),
+      e.parallel(
+        e.resistor("R300", resistance: 300, route: "under"),
+        e.resistor("R200", resistance: 200, route: "direct"),
+        e.series(
+          e.resistor("R50", resistance: 50),
+          e.resistor("R250", resistance: 250),
+          route: "over",
+        ),
+      ),
+      e.resistor("R150", resistance: 150),
+    ),
+  )
+  e.diagram(circuit, labels: "value", style: (scale: 0.82))
+})
+
+#section("A returning run too wide for that level drops to a rail below the load", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("wide-source", voltage: 18),
+    e.series(
+      e.resistor("wide-input", resistance: 100),
+      e.parallel(
+        e.resistor("wide-vertical", resistance: 300, route: "under"),
+        e.resistor("wide-diagonal", resistance: 200, route: "direct"),
+        e.series(
+          e.resistor("wide-upper", resistance: 50),
+          e.resistor("wide-right", resistance: 250),
+          route: "over",
+        ),
+      ),
+      e.resistor("wide-first-return", resistance: 150),
+      e.resistor("wide-second-return", resistance: 75),
+    ),
+  )
+  e.diagram(circuit, labels: "value", style: (scale: 0.72))
+})
+
+#pagebreak()
+
+== The return rail preserves the declared order
+
+#section("Walking from the source, the bottom rail runs backwards through the chain", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("ordered-source", voltage: 12),
+    e.series(
+      e.resistor("first", resistance: 10),
+      e.parallel(
+        e.resistor("branch-upper", resistance: 20),
+        e.resistor("branch-lower", resistance: 30),
+      ),
+      e.resistor("third", resistance: 40),
+      e.resistor("fourth", resistance: 50),
+    ),
+  )
+  e.diagram(circuit, labels: "name", style: (scale: 0.82))
+})
+
+#section("A plain series chain splits evenly between the two rails", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("plain-source", voltage: 12),
+    e.series(
+      e.resistor("plain-first", resistance: 10),
+      e.resistor("plain-second", resistance: 20),
+    ),
+  )
+  e.diagram(circuit, labels: "value", style: (scale: 0.82))
+})
+
+#section("A single component has nothing to split, so it keeps one rail", {
+  let circuit = e.dc-circuit(
+    e.voltage-source("lone-source", voltage: 12),
+    e.resistor("lone", resistance: 10),
+  )
+  e.diagram(circuit, labels: "value", style: (scale: 0.82))
+})
+
+#pagebreak()
+
+== One frame vocabulary, four shapes
+
+#section("Direct plus over is a level frame peaking at the middle", {
+  e.diagram(e.dc-circuit(
+    e.voltage-source("over-source", voltage: 12),
+    e.parallel(
+      e.resistor("over-direct", resistance: 10, route: "direct"),
+      e.series(
+        e.resistor("over-left", resistance: 20),
+        e.resistor("over-right", resistance: 30),
+        route: "over",
+      ),
+    ),
+  ), labels: "value", style: (scale: 0.7))
+})
+
+#section("Direct plus under is the same frame reflected", {
+  e.diagram(e.dc-circuit(
+    e.voltage-source("under-source", voltage: 12),
+    e.parallel(
+      e.resistor("under-direct", resistance: 10, route: "direct"),
+      e.series(
+        e.resistor("under-left", resistance: 20),
+        e.resistor("under-right", resistance: 30),
+        route: "under",
+      ),
+    ),
+  ), labels: "value", style: (scale: 0.7))
+})
+
+#section("A single component on a corner route wires its second leg", {
+  e.diagram(e.dc-circuit(
+    e.voltage-source("single-source", voltage: 12),
+    e.parallel(
+      e.resistor("single-direct", resistance: 10, route: "direct"),
+      e.resistor("single-corner", resistance: 40, route: "over"),
+    ),
+  ), labels: "value", style: (scale: 0.7))
+})
+
+#section("Branches on both sides make the frame descend", {
+  e.diagram(e.dc-circuit(
+    e.voltage-source("descend-source", voltage: 18),
+    e.parallel(
+      e.resistor("descend-under", resistance: 300, route: "under"),
+      e.resistor("descend-direct", resistance: 200, route: "direct"),
+      e.series(
+        e.resistor("descend-top", resistance: 50),
+        e.resistor("descend-right", resistance: 250),
+        route: "over",
+      ),
+    ),
+  ), labels: "value", style: (scale: 0.7))
+})
+
+#pagebreak()
+
+== A small load still draws a readable loop
+
+#section("The loop is widened to a floor, and the added width centres the runs", {
+  e.diagram(e.dc-circuit(
+    e.voltage-source("narrow-source", voltage: 12),
+    e.series(
+      e.resistor("narrow-first", resistance: 10),
+      e.resistor("narrow-second", resistance: 20),
+    ),
+  ), labels: "value", style: (scale: 0.8))
+})
+
+#section("Without the floor, the same circuit closes as a tall narrow loop", {
+  e.diagram(e.dc-circuit(
+    e.voltage-source("thin-source", voltage: 12),
+    e.series(
+      e.resistor("thin-first", resistance: 10),
+      e.resistor("thin-second", resistance: 20),
+    ),
+    style: (minimum-loop-width: 0.1),
+  ), labels: "value", style: (scale: 0.8))
+})
+
+#section("A wider floor stretches the rails and keeps the runs centred", {
+  e.diagram(e.dc-circuit(
+    e.voltage-source("wide-source", voltage: 12),
+    e.series(
+      e.resistor("wide-first", resistance: 10),
+      e.resistor("wide-second", resistance: 20),
+    ),
+    style: (minimum-loop-width: 8),
+  ), labels: "value", style: (scale: 0.8))
+})
+
+#section("A load already wider than the floor is untouched by it", {
+  e.diagram(e.dc-circuit(
+    e.voltage-source("unaffected-source", voltage: 18),
+    e.series(
+      e.resistor("unaffected-input", resistance: 100),
+      e.parallel(
+        e.resistor("unaffected-under", resistance: 300, route: "under"),
+        e.resistor("unaffected-direct", resistance: 200, route: "direct"),
+        e.series(
+          e.resistor("unaffected-top", resistance: 50),
+          e.resistor("unaffected-right", resistance: 250),
+          route: "over",
+        ),
+      ),
+      e.resistor("unaffected-return", resistance: 150),
+    ),
+  ), labels: "value", style: (scale: 0.8))
+})

@@ -4,6 +4,7 @@ set -eu
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 invalid_source="$repository_root/tests/diagnostics/invalid.typ"
 positive_source="$repository_root/tests/diagnostics/positive.typ"
+electricity_import_source="$repository_root/tests/diagnostics/electricity-import.typ"
 temporary_directory=$(mktemp -d)
 trap 'rm -rf "$temporary_directory"' EXIT HUP INT TERM
 
@@ -70,9 +71,42 @@ run_invalid_case invalid-assumption "accepted values are"
 run_invalid_case ambiguous-body "solves one body at a time"
 run_invalid_case components-without-frame "has no supporting surface frame"
 run_invalid_case unsupported-solver-body "drawing-only disk"
+run_invalid_case electrical-invalid-resistance "invalid \`resistance:\`"
+run_invalid_case electrical-invalid-capacitance "invalid \`capacitance:\`"
+run_invalid_case electrical-capacitor-unit "\`unit:\` must be auto, none"
+run_invalid_case electrical-capacitor-label "\`label:\` must be auto, none"
+run_invalid_case electrical-empty-series "needs at least two circuit declarations"
+run_invalid_case electrical-duplicate-name "declared twice"
+run_invalid_case electrical-source-in-load "only as its first argument"
+run_invalid_case electrical-style-key "unknown electricity diagram style key"
+run_invalid_case electrical-invalid-unit "\`unit:\` must be auto, none"
+run_invalid_case electrical-resistor-symbol "style has invalid \`symbol:\`"
+run_invalid_case electrical-source-symbol "style has invalid \`symbol:\`"
+run_invalid_case electrical-capacitor-style "has unknown style key \"fill\""
+run_invalid_case electrical-capacitor-stroke "invalid \`stroke:\`"
+run_invalid_case electrical-capacitor-text "style \`text:\` must be a text-style dictionary"
+run_invalid_case electrical-diagram-symbol "electricity diagram style has invalid \`resistor-symbol:\`"
+run_invalid_case electrical-frame-rise "invalid \`frame-rise:\`"
+run_invalid_case electrical-minimum-loop-width "invalid \`minimum-loop-width:\`"
+run_invalid_case electrical-capacitor-gap "invalid \`capacitor-plate-gap:\`"
+run_invalid_case electrical-capacitor-height "invalid \`capacitor-plate-height:\`"
+run_invalid_case electrical-capacitor-gap-too-wide "must be smaller than \`component-length:\`"
+run_invalid_case electrical-fold-value "invalid \`fold:\`"
+run_invalid_case electrical-fold-unavailable "found nothing to place on the return rail"
+run_invalid_case electrical-fold-trailing-missing "found nothing to place on the return rail"
+run_invalid_case electrical-route-value "invalid \`route:\`"
+run_invalid_case electrical-route-partial "every branch must declare one"
+run_invalid_case electrical-route-repeated "at most one branch on the"
+run_invalid_case electrical-route-nested-branch "must be one component or a flat series"
+run_invalid_case electrical-route-corner-crowded "turns at one corner and can hold at most two"
+run_invalid_case electrical-route-outside-parallel "has no meaning on a network that is not such a branch"
 
 typst compile \
   --root "$repository_root" \
   "$positive_source" \
   "$temporary_directory/positive.pdf"
-echo "PASS positive symbolic, numeric, selected multi-body, and drawing-only cases"
+typst compile \
+  --root "$repository_root" \
+  "$electricity_import_source" \
+  "$temporary_directory/electricity-import.pdf"
+echo "PASS positive mechanics and electrical drawing cases"

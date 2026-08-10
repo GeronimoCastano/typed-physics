@@ -95,18 +95,30 @@
   surface-style: physics.surface-style,
   force-style: physics.force-style,
   connector-style: physics.connector-style,
+  electricity: physics.electricity,
   cetz: cetz,
 )
 
 // `placement:` lets a worked solution read left-aligned like the prose around
 // it while a figure stays centred in its frame.
-#let example(body, side: true, placement: center + horizon) = block(
+#let example(
+  body,
+  side: true,
+  placement: center + horizon,
+  code-size: none,
+) = block(
   width: 100%,
   stroke: 0.6pt + luma(210),
   radius: 5pt,
   clip: true,
   breakable: false,
   {
+    let source = if code-size == none {
+      body
+    } else {
+      show raw.where(block: true): set text(size: code-size)
+      body
+    }
     let rendered = block(
       width: 100%, fill: white, inset: (x: 12pt, y: 14pt),
       align(placement, eval(body.text, mode: "markup", scope: package-scope)),
@@ -114,11 +126,11 @@
     if side {
       grid(
         columns: (1.05fr, 0.95fr), column-gutter: 0pt,
-        block(width: 100%, fill: luma(248), inset: (y: 4pt), body),
+        block(width: 100%, fill: luma(248), inset: (y: 4pt), source),
         block(width: 100%, stroke: (left: 0.6pt + luma(220)), rendered),
       )
     } else {
-      block(width: 100%, fill: luma(248), inset: (y: 4pt), body)
+      block(width: 100%, fill: luma(248), inset: (y: 4pt), source)
       block(width: 100%, stroke: (top: 0.6pt + luma(220)), rendered)
     }
   },
@@ -154,7 +166,7 @@
 #align(center)[
   #text(size: 40pt, weight: "bold", fill: accent)[typed-physics]
   #v(0.2em)
-  #text(size: 15pt, fill: luma(90))[Mechanics figures, free-body diagrams, and solutions from one declaration]
+  #text(size: 15pt, fill: luma(90))[Mechanics and electrical diagrams from physical declarations]
   #v(0.4em)
   #text(size: 12pt, weight: "bold")[User Guide]
   #v(1.6em)
@@ -558,6 +570,378 @@ reference explain what the arguments mean and show live examples.
 ```
 
 #c("theme") is the exported dictionary containing every diagram-style default.
+
+== Electrical circuits
+
+Electrical names live under the #c("electricity") namespace so a circuit's
+#c("voltage-source"), #c("resistor"), and #c("capacitor") vocabulary cannot
+collide with mechanics declarations.
+
+```typ
+#import "@preview/typed-physics:0.1.0": electricity as e
+
+#e.dc-circuit(source, network, style: (:))
+#e.voltage-source(name, voltage: none, unit: auto, label: auto, style: (:))
+#e.resistor(name, resistance: none, unit: auto, label: auto, route: auto, style: (:))
+#e.capacitor(name, capacitance: none, unit: auto, label: auto, route: auto, style: (:))
+#e.series(..branches, route: auto)
+#e.parallel(..branches, route: auto)
+
+#e.diagram(circuit, labels: "both", fold: auto, style: (:))
+#e.draw(circuit, labels: "both", fold: auto, style: (:))
+
+#e.resistor-style(symbol: auto, fill: auto, stroke: auto, text: auto)
+#e.capacitor-style(stroke: auto, text: auto)
+#e.voltage-source-style(symbol: auto, fill: auto, stroke: auto, text: auto)
+#e.theme
+```
+
+// ═════════════════════════════════════════════════════════════════════════════
+= Electrical circuits <electrical-circuits>
+// ═════════════════════════════════════════════════════════════════════════════
+
+The electricity namespace turns circuit connectivity into a complete drawing.
+Authors declare which resistors and capacitors are in series and which paths
+are in parallel; the package chooses positions, branch spacing, wire routes,
+junctions, source placement, and component rotation.
+
+This is intentionally a drawing-only electrical release. Values are carried by
+the declarations and printed consistently, but they are not evaluated. There
+is no equivalent-resistance or capacitance, charge, current, voltage-drop,
+power, transient, Ohm's-law, or Kirchhoff solver yet.
+
+== Declaring a DC circuit
+
+#example(```typ
+#let e = electricity
+
+#let circuit = e.dc-circuit(
+  e.voltage-source("V", voltage: 12),
+  e.series(
+    e.resistor("R1", resistance: 4),
+    e.parallel(
+      e.resistor("R2", resistance: 6),
+      e.capacitor("C1", capacitance: 220, unit: "µF"),
+    ),
+  ),
+)
+
+#e.diagram(circuit)
+```)
+
+#c("dc-circuit") takes exactly one ideal voltage source and one two-terminal
+load network. A resistor or capacitor is itself a network, while #c("series")
+and #c("parallel") compose two or more networks and may be nested to any depth.
+
+#reference-table(
+  [*Function or argument*], [*Meaning*],
+  [#c("dc-circuit(source, network)")], [Closes the declared resistor/capacitor network through one ideal DC voltage source.],
+  [#c("voltage-source(name, voltage:, unit:)")], [Declares the source. #c("voltage:") is a positive number, symbolic content, or #c("none").],
+  [#c("resistor(name, resistance:, unit:)")], [Declares one resistor. #c("resistance:") is a positive number, symbolic content, or #c("none").],
+  [#c("capacitor(name, capacitance:, unit:)")], [Declares one ideal capacitor. #c("capacitance:") is a positive number, symbolic content, or #c("none").],
+  [#c("series(..branches)")], [Connects two or more declared networks end to end.],
+  [#c("parallel(..branches)")], [Connects two or more declared networks between the same split and join nodes.],
+  [#c("route:")], [How one branch of a #c("parallel") travels between the split and join nodes. See @route-section.],
+  [#c("unit:")], [#c("auto") prints volts, ohms, or farads, #c("none") omits the unit, and a non-empty string or content supplies a displayed unit such as #c("\"µF\"") or #c("$mu Omega$"). It does not rescale the value.],
+  [#c("label:")], [#c("auto") uses the component name, #c("none") hides it, and a string or content supplies the displayed name.],
+  [#c("style:")], [On #c("dc-circuit"), sets defaults for the complete diagram. On a component, overrides only that component.],
+)
+
+Every component name must be unique. Zero or negative resistance, capacitance,
+and voltage are rejected rather than silently changing the component's physical
+meaning or circuit topology.
+
+== Displaying units
+
+Ohms, farads, and volts are printed when #c("unit: auto") is left unchanged. A
+component may instead carry a prefixed or custom display unit. This is
+annotation rather than conversion: #c("capacitance: 220, unit: \"µF\"") prints
+220 microfarads and does not reinterpret a value originally expressed in
+farads.
+
+#example(```typ
+#let e = electricity
+
+#let micro-circuit = e.dc-circuit(
+  e.voltage-source("bias", voltage: 750, unit: "µV"),
+  e.series(
+    e.resistor(
+      "sensor",
+      resistance: 12,
+      unit: $mu Omega$,
+      label: $R_s$,
+    ),
+    e.capacitor("coupling", capacitance: 470, unit: "nF", label: $C_c$),
+  ),
+)
+
+#e.diagram(micro-circuit)
+```)
+
+Use a string such as #c("\"kΩ\"") or #c("\"µF\"") or mathematical content
+such as #c("$mu Omega$") when the typography should be authored directly.
+Pass #c("unit: none") to print only the declared value.
+
+== Shaping a parallel network with #raw("route:") <route-section>
+
+Parallel branches are stacked one above another by default, which is the
+conventional general-purpose presentation. A branch may instead declare how it
+travels between the split and join nodes, and the declared routes together give
+the network a frame.
+
+#reference-table(
+  [*#c("route:") value*], [*How the branch travels*],
+  [#c("auto")], [The default. The branch gets its own horizontal baseline, joined to the others by the split and join wires.],
+  [#c("\"direct\"")], [Straight from the split node to the join node.],
+  [#c("\"over\"")], [Around the corner above the direct line.],
+  [#c("\"under\"")], [Around the corner below it.],
+)
+
+A direct branch beside a path routed over the top is the familiar delta:
+
+#example(```typ
+#let e = electricity
+
+#let triangle = e.dc-circuit(
+  e.voltage-source("V", voltage: 12),
+  e.parallel(
+    e.resistor("R1", resistance: 10, route: "direct"),
+    e.series(
+      e.resistor("R2", resistance: 20),
+      e.resistor("R3", resistance: 30),
+      route: "over",
+    ),
+  ),
+)
+
+#e.diagram(triangle, labels: "value")
+```, side: false)
+
+The split and join nodes stay level while the frame bulges to one side, so the
+routed branch peaks midway. A frame carrying branches on *both* sides has no
+room for that, so its split and join separate vertically and each routed branch
+turns at a corner instead:
+
+#example(```typ
+#let e = electricity
+
+#let frame = e.dc-circuit(
+  e.voltage-source("V", voltage: 18),
+  e.series(
+    e.resistor("R100", resistance: 100),
+    e.parallel(
+      e.resistor("R300", resistance: 300, route: "under"),
+      e.resistor("R200", resistance: 200, route: "direct"),
+      e.series(
+        e.resistor("R50", resistance: 50),
+        e.resistor("R250", resistance: 250),
+        route: "over",
+      ),
+    ),
+    e.resistor("R150", resistance: 150),
+  ),
+)
+
+#e.diagram(frame, labels: "value")
+```, side: false)
+
+Every branch still joins the same two electrical nodes; #c("route:") changes
+where they are drawn and nothing else. No component receives a position, angle,
+or endpoint.
+
+A branch routed #c("\"over\"") or #c("\"under\"") turns at one corner, so it
+holds one component on each leg. Given a single component it takes the first
+leg and the second is plain wire. A branch routed #c("\"direct\"") spreads its
+components evenly along the straight run.
+
+Within one #c("parallel"), either no branch declares a route or all of them do,
+and at most one branch may take each route. Those rules are what let the
+declared routes describe a single unambiguous shape.
+
+== The return rail
+
+A DC circuit is a loop, and the return rail along its bottom is a place to put
+components rather than a bare wire. A #c("series") load is split between the
+two rails so that they come out as close in width as the branches allow,
+instead of running the whole load to the right and returning along an empty
+wire.
+
+#example(```typ
+#let e = electricity
+
+#let circuit = e.dc-circuit(
+  e.voltage-source("V", voltage: 12),
+  e.series(
+    e.resistor("R1", resistance: 100),
+    e.parallel(
+      e.resistor("R2", resistance: 300),
+      e.resistor("R3", resistance: 200),
+    ),
+    e.resistor("R4", resistance: 150),
+  ),
+)
+
+#e.diagram(circuit, labels: "value")
+```, side: false)
+
+Nothing in the declaration selects a rail. The load is an ordinary
+series/parallel composition, and #c("R4") reaches the bottom because the loop
+has already turned by the time the chain gets to it. Pass #c("fold: false") to
+keep the whole load on one rail:
+
+```typ
+#e.diagram(circuit, labels: "value", fold: false)
+```
+
+A parallel network is the widest thing on the loop, so it anchors the outgoing
+rail and nothing up to and including it returns. The branches after it are the
+ones free to move, and a load with no parallel network at all splits wherever
+the two rails come out closest:
+
+#example(```typ
+#let e = electricity
+
+#e.diagram(
+  e.dc-circuit(
+    e.voltage-source("V", voltage: 5),
+    e.series(
+      e.resistor("R1", resistance: 12),
+      e.resistor("R2", resistance: 3),
+    ),
+  ),
+  labels: "value",
+)
+```, side: false)
+
+Components on the return rail stay in declared order along the loop. Reading
+the figure clockwise from the source, the bottom rail runs right to left, so
+the first component to return is the rightmost one.
+
+=== Keeping a small circuit in proportion <loop-width>
+
+The source spans a component length down the left edge, so a load only one
+component wide on each rail would close as a tall narrow loop. The loop is
+therefore never drawn narrower than #c("minimum-loop-width"). Width added that
+way belongs to neither end of a rail, so it is split evenly and the runs sit
+centred:
+
+#example(```typ
+#let e = electricity
+
+#let circuit = e.dc-circuit(
+  e.voltage-source("V", voltage: 12),
+  e.series(
+    e.resistor("R1", resistance: 10),
+    e.resistor("R2", resistance: 20),
+  ),
+)
+
+#e.diagram(circuit, style: (minimum-loop-width: 8))
+```, side: false)
+
+Raise it to spread a small circuit out, or lower it to let one close as tightly
+as its components allow. A loop already wider than the floor is unaffected, so
+the setting only reaches the circuits that need it. Like every diagram style
+key it may be set on #c("dc-circuit(style:)") for a whole figure or on
+#c("diagram(style:)") for one view.
+
+A load that already descends closes along its own exit level rather than
+dropping below everything. The descending frame in @route-section is placed
+that way: its lower edge and the circuit's return rail are the same line, which
+is why #c("R150") sits on the frame's own bottom side. A frame across a bare
+source closes the same way, so the source sits on the left edge between the
+frame's two levels rather than below an empty loop.
+
+That level is used only when the source fits between the load's entry and exit
+levels and the returning components stay left of wherever the load descends.
+Otherwise the rail drops below the whole load, which is always available.
+
+#c("fold: true") asks for the return rail explicitly and reports when the load
+has no trailing components after a parallel network to put there.
+
+== Circuit customization
+
+#example(```typ
+#let e = electricity
+
+#let circuit = e.dc-circuit(
+  e.voltage-source(
+    "battery",
+    voltage: 6,
+    unit: "mV",
+    style: e.voltage-source-style(
+      symbol: "circle",
+      fill: rgb("#FFF3BF"),
+    ),
+  ),
+  e.series(
+    e.resistor(
+      "load",
+      resistance: 7,
+      label: $R_L$,
+      unit: $mu Omega$,
+      style: e.resistor-style(
+        symbol: "rectangle",
+        fill: rgb("#D0EBFF"),
+        stroke: 1.2pt + blue,
+      ),
+    ),
+    e.capacitor(
+      "C1",
+      capacitance: 47,
+      unit: "µF",
+      style: e.capacitor-style(stroke: 1.2pt + purple),
+    ),
+  ),
+  style: (wire-stroke: 1.1pt + rgb("#495057")),
+)
+
+#e.diagram(circuit)
+```)
+
+#reference-table(
+  [*Diagram style key*], [*Meaning*],
+  [#c("wire-stroke")], [Wires and component leads.],
+  [#c("component-stroke")], [Default resistor and capacitor symbol stroke.],
+  [#c("component-fill")], [Default fill for the closed rectangular resistor symbol.],
+  [#c("source-fill")], [Default voltage-source fill.],
+  [#c("junction-fill"), #c("show-junctions")], [Junction-dot paint and visibility.],
+  [#c("resistor-symbol")], [Default resistor shape: #c("\"zigzag\"") or #c("\"rectangle\"").],
+  [#c("voltage-source-symbol")], [Default source shape: #c("\"battery\"") for long and short plates, or #c("\"circle\"") for a circular source with polarity marks.],
+  [#c("component-length")], [Terminal-to-terminal span reserved for one ordinary component.],
+  [#c("resistor-length"), #c("resistor-height")], [Length and height of either resistor symbol.],
+  [#c("capacitor-plate-gap"), #c("capacitor-plate-height")], [Separation and height of the two capacitor plates.],
+  [#c("source-radius")], [Radius of the circular ideal voltage source.],
+  [#c("source-plate-gap")], [Separation between the battery symbol's positive and negative plates.],
+  [#c("source-long-plate"), #c("source-short-plate")], [Lengths of the battery symbol's positive and negative plates.],
+  [#c("parallel-gap"), #c("branch-lead")], [Clearance between parallel paths and the wire length around their split and join.],
+  [#c("label-offset"), #c("label-text")], [Distance and text styling for names and values.],
+  [#c("source-clearance")], [Clearance between the load network and the source return path.],
+  [#c("minimum-loop-width")], [Narrowest the complete circuit loop may be drawn. See @loop-width.],
+  [#c("apex-rise")], [Height of the peak on a level routed frame.],
+  [#c("frame-rise")], [Vertical separation between the split and join nodes of a descending routed frame.],
+  [#c("scale")], [Scale of the complete rendered circuit.],
+)
+
+Resistor and voltage-source style builders accept #c("symbol:"), #c("fill:"),
+#c("stroke:"), and #c("text:").
+#c("resistor-style(symbol: \"rectangle\")") and
+#c("voltage-source-style(symbol: \"circle\")") override the default symbol for
+one declaration. #c("capacitor-style") accepts #c("stroke:") and #c("text:")
+for the conventional two-plate symbol. Component styles override the diagram
+defaults for that declaration only.
+
+== Electrical scope
+
+This release covers all two-terminal networks made from ideal resistors and
+capacitors that #c("series") and #c("parallel") can compose. #c("route:") and
+the return rail place an already declared topology; they do not change what is
+connected to what.
+
+Inductors, switches, meters, multiple or dependent sources, nonlinear devices,
+current arrows, voltage-polarity annotations, and every form of circuit solving
+are outside this drawing release. Capacitors are drawing declarations only;
+there is no charge, transient, impedance, or frequency-domain solver.
 
 // ═════════════════════════════════════════════════════════════════════════════
 = Declaring a situation
@@ -1908,6 +2292,17 @@ These stop compilation with a message naming the element and the reason.
   [#c("solve") on a body resting on a wall or ceiling], [What 0.1.0 supports.],
   [A situation whose normal force comes out negative], [The value, and that the body leaves the surface.],
   [#c("solve") on a situation with several bodies and no name], [The list of bodies to choose from.],
+  [A zero or negative electrical value], [The component and the invalid #c("resistance:"), #c("capacitance:"), or #c("voltage:") value.],
+  [A numeric or empty electrical #c("unit:")], [A request for #c("auto"), #c("none"), a non-empty string, or content.],
+  [A repeated electrical component name], [A request to give every source, resistor, and capacitor a unique name.],
+  [A #c("route:") on some branches of a #c("parallel") but not all], [A request to route every branch, because the routes together describe the frame.],
+  [Two branches taking the same route], [The route that was asked for twice.],
+  [A cornering branch with more than two components], [The number it holds and the two the corner allows.],
+  [#c("route:") outside a #c("parallel") branch], [The declaration form that gives the annotation meaning.],
+  [#c("fold: true") on a load that cannot be split], [Which loads have nothing to place on the return rail.],
+  [A non-boolean #c("fold:")], [A request for #c("true"), #c("false"), or #c("auto").],
+  [A non-positive #c("minimum-loop-width")], [The key and the value that was rejected.],
+  [A symbol from the wrong component family], [The accepted resistor or voltage-source symbol names.],
   [An unknown #c("style:") key], [The key that was not recognised.],
 )
 
@@ -1932,6 +2327,13 @@ still: it balances one body on a ground or a ramp and nothing else.
   #c("ring"), and pendulum motion. Their geometry draws and composes without a
   derived acceleration.
 - #c("components(of:)") for anything but the weight.
+- Solving electrical circuits. The electricity namespace draws nested
+  two-terminal series/parallel resistor and capacitor networks but does not
+  calculate resistance, capacitance, charge, current, voltage, impedance,
+  transients, or power.
+- Electrical topologies that #c("series") and #c("parallel") cannot compose,
+  such as a bridge network. This release also omits electrical components other
+  than ideal voltage sources, resistors, and capacitors.
 
 // ═════════════════════════════════════════════════════════════════════════════
 = License
