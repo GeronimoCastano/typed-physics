@@ -76,7 +76,14 @@
     expression.number(0)
   } else { support-surface.inclination-quantity },
   friction: _resolve-contact-friction(body-declaration, support-surface),
+  touching: body-declaration.touching,
   hangs-from: attachment-position,
+  // What the body hangs from, as opposed to where: a rope over a pulley leads
+  // somewhere else, and only the declaration still says so.
+  hangs-from-element: anchors.attachment-element-name(body-declaration.hanging),
+  // Filled in once every declaration has been placed, because an element that
+  // reaches this body may be declared after it.
+  reached-by: (),
   style: body-declaration.style,
   loads: (),
   velocities: (),

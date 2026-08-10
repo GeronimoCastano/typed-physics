@@ -11,41 +11,41 @@
 #import "expression.typ"
 
 // The component of a load along and out of the surface its body rests on.
-// A load that lies on one of the surface's own axes contributes exactly, not
-// through a cosine of zero, so a horizontal push on level ground stays `F`.
+//
+// The angle is measured in the surface's own frame rather than against the
+// horizontal, so one pair of expressions covers a slope that climbs either way,
+// a wall, and a ceiling. A load that lies on one of the surface's own axes
+// contributes exactly, not through a cosine of zero, so a horizontal push on
+// level ground stays `F`.
 #let resolve-load-components-in-surface-frame(applied-load, body) = {
-  let load-angle-relative-to-surface = (
-    applied-load.inclination - body.inclination
+  let tangent-projection = vector.dot-product(
+    applied-load.direction,
+    body.direction,
+  )
+  let outward-normal-projection = vector.dot-product(
+    applied-load.direction,
+    body.outward-normal,
   )
   let load-is-axis-aligned = (
-    calc.abs(calc.rem(load-angle-relative-to-surface.deg(), 90)) < 1e-9
-  )
-  let relative-angle-quantity = expression.declared-angle(
-    load-angle-relative-to-surface,
-    $phi$,
+    calc.abs(tangent-projection) < 1e-9
+      or calc.abs(outward-normal-projection) < 1e-9
   )
   if load-is-axis-aligned {
     return (
       along: expression.product(
         applied-load.magnitude,
-        expression.number(
-          calc.round(
-            calc.cos(load-angle-relative-to-surface),
-            digits: 6,
-          ),
-        ),
+        expression.number(calc.round(tangent-projection, digits: 6)),
       ),
       normal: expression.product(
         applied-load.magnitude,
-        expression.number(
-          calc.round(
-            calc.sin(load-angle-relative-to-surface),
-            digits: 6,
-          ),
-        ),
+        expression.number(calc.round(outward-normal-projection, digits: 6)),
       ),
     )
   }
+  let relative-angle-quantity = expression.declared-angle(
+    calc.atan2(tangent-projection, outward-normal-projection),
+    $phi$,
+  )
   (
     along: expression.product(
       applied-load.magnitude,
@@ -54,6 +54,42 @@
     normal: expression.product(
       applied-load.magnitude,
       expression.sine(relative-angle-quantity),
+    ),
+  )
+}
+
+// The weight resolved into the axes of the surface a body rests on.
+//
+// The incline family states its frame through an angle the author declared, so
+// its weight keeps the `sin theta` and `cos theta` a reader expects, and level
+// ground folds them away against its exact zero. Every other supported surface
+// stands at a fixed attitude with no angle worth printing, and its frame is
+// read from the placed axes instead — which is also the only way a ceiling,
+// whose outward normal points down, reaches the right sign.
+#let weight-components-in-surface-frame(
+  body,
+  support-surface,
+  weight-force-magnitude,
+) = {
+  let surface-states-its-frame-as-an-angle = (
+    support-surface.kind in ("ground", "ramp")
+  )
+  let tangent-rise = if surface-states-its-frame-as-an-angle {
+    expression.sine(body.inclination-quantity)
+  } else {
+    expression.number(calc.round(body.direction.at(1), digits: 6))
+  }
+  let outward-normal-rise = if surface-states-its-frame-as-an-angle {
+    expression.cosine(body.inclination-quantity)
+  } else {
+    expression.number(calc.round(body.outward-normal.at(1), digits: 6))
+  }
+  (
+    along: expression.negated(
+      expression.product(weight-force-magnitude, tangent-rise),
+    ),
+    normal: expression.negated(
+      expression.product(weight-force-magnitude, outward-normal-rise),
     ),
   )
 }
@@ -83,8 +119,8 @@
   }
 
   // A body held up by something other than a surface still has a force holding
-  // it up, and the free-body diagram is entitled to show it even though its
-  // magnitude waits on a solve this package does not attempt.
+  // it up, and the free-body diagram is entitled to show it whether or not a
+  // model was able to give it a magnitude.
   if body.hangs-from != none {
     acting-forces.push((
       role: "tension",
@@ -92,7 +128,11 @@
       direction: vector.normalized(
         vector.subtract(body.hangs-from, body.center),
       ),
-      magnitude: none,
+      magnitude: if solution == none or "tension" not in solution {
+        none
+      } else {
+        solution.tension.expression
+      },
       applied-at: body.center,
       style: (:),
     ))

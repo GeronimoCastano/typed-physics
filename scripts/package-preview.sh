@@ -53,7 +53,15 @@ mkdir -p "$target/src" "$target/assets/readme"
 cp "$repo_root/typst.toml" "$target/typst.toml"
 cp "$repo_root/README.md" "$target/README.md"
 cp "$repo_root/LICENSE" "$target/LICENSE"
-cp "$repo_root"/src/*.typ "$target/src/"
+
+# Namespaces such as src/electricity are their own directories, so the source
+# tree is walked rather than globbed. Only Typst modules travel: anything else
+# under src/ is a build artifact that the bundle has no use for.
+find "$repo_root/src" -type f -name '*.typ' | while IFS= read -r module_path; do
+  module_relative_path=${module_path#"$repo_root/src/"}
+  mkdir -p "$target/src/$(dirname "$module_relative_path")"
+  cp "$module_path" "$target/src/$module_relative_path"
+done
 
 found_png=0
 for image in "$repo_root"/assets/readme/*.png; do
@@ -65,6 +73,28 @@ done
 
 if [ "$found_png" -eq 0 ]; then
   echo "warning: no README PNG assets found in assets/readme" >&2
+fi
+
+# A bundle that is missing a module still copies without complaint, and the
+# first person to find out would be someone importing the published version. So
+# the copy is imported here, from the packages checkout, exactly as a reader
+# would import it.
+import_check_dir=$(mktemp -d)
+trap 'rm -rf "$import_check_dir"' EXIT HUP INT TERM
+cat >"$import_check_dir/import-check.typ" <<EOF
+#import "@preview/$package_name:$version": *
+#import "@preview/$package_name:$version": electricity
+Imported.
+EOF
+if ! typst compile \
+  --package-path "$packages_repo/packages" \
+  --root "$import_check_dir" \
+  "$import_check_dir/import-check.typ" \
+  "$import_check_dir/import-check.pdf" >"$import_check_dir/log.txt" 2>&1
+then
+  echo "error: the prepared bundle does not import; it is missing a module or has a broken one" >&2
+  sed -n '1,40p' "$import_check_dir/log.txt" >&2
+  exit 1
 fi
 
 echo "Prepared $package_name $version at:"

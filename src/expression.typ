@@ -11,6 +11,10 @@
 // results read like textbook answers: 34.0, 2.36, 0.289.
 #let format-number(value, digits: 3) = {
   if value == none { return "?" }
+  // A component that only differs from zero by the rounding of a sine reads as
+  // zero, rather than as a string of zeros carried out to the last digit or as
+  // a negative zero.
+  let value = if calc.abs(value) < 1e-9 { 0 } else { value }
   let absolute-value = calc.abs(value)
   let decimal-places = if absolute-value == 0 {
     2
@@ -83,12 +87,6 @@
 // caller can assemble the general form of an equation and let the terms that
 // do not apply to this particular situation disappear on their own.
 
-#let negated(term) = {
-  if is-number(term) { return number(-term.value) }
-  if term.kind == "negated" { return term.term }
-  (kind: "negated", term: term)
-}
-
 #let sum(..parts) = {
   let nonconstant-terms = ()
   let constant-sum = 0.0
@@ -107,7 +105,32 @@
   if constant-sum != 0 { nonconstant-terms.insert(0, number(constant-sum)) }
   if nonconstant-terms.len() == 0 { return number(0) }
   if nonconstant-terms.len() == 1 { return nonconstant-terms.first() }
+
+  // Something is added to before anything is taken away from it, so a term that
+  // is not subtracted leads when there is one: `F - m g sin theta`, not
+  // `-m g sin theta + F`.
+  if nonconstant-terms.first().kind == "negated" {
+    let leading-index = nonconstant-terms.position(
+      additive-term => additive-term.kind != "negated",
+    )
+    if leading-index != none {
+      nonconstant-terms = (
+        (nonconstant-terms.at(leading-index),)
+          + nonconstant-terms.slice(0, leading-index)
+          + nonconstant-terms.slice(leading-index + 1)
+      )
+    }
+  }
   (kind: "sum", terms: nonconstant-terms)
+}
+
+// Negating a sum negates its terms, so a balance that comes out as the negative
+// of what was summed still reads as a difference: `F - m g`, not `-(m g - F)`.
+#let negated(term) = {
+  if is-number(term) { return number(-term.value) }
+  if term.kind == "negated" { return term.term }
+  if term.kind == "sum" { return sum(..term.terms.map(negated)) }
+  (kind: "negated", term: term)
 }
 
 #let difference(left, right) = sum(left, negated(right))
@@ -436,4 +459,34 @@
   let evaluated-value = value-of(term)
   if evaluated-value == none { return none }
   $#format-number(evaluated-value, digits: digits)$
+}
+
+#let _with-unit(rendered-value, unit) = if unit == none {
+  rendered-value
+} else {
+  $#rendered-value thin #unit$
+}
+
+// What is left of an expression once every quantity that has a number is
+// replaced by it. A fully known term reaches a value, a fully symbolic one does
+// not move, and a mixed one lands somewhere in between.
+#let _partially-evaluated(term) = {
+  let folded-term = evaluated-where-known(term)
+  if folded-term == term { none } else { folded-term }
+}
+
+// A stated quantity is the value when every quantity behind it carries one, and
+// otherwise the expression carried as far as the declared numbers reach. Both
+// the mechanics and the electrical report state their results this way, because
+// both are reading the same kind of tree.
+#let stated-value(symbol, term, unit: none) = {
+  let numeric-value = numeric-math-of(term)
+  if numeric-value != none {
+    return $#symbol = #_with-unit(numeric-value, unit)$
+  }
+  let folded-term = _partially-evaluated(term)
+  if folded-term != none {
+    return $#symbol = #_with-unit(math-of(folded-term), unit)$
+  }
+  $#symbol = #math-of(term)$
 }

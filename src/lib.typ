@@ -13,6 +13,7 @@
 #import "render.typ" as scene-rendering
 #import "fbd.typ" as free-body-rendering
 #import "solver.typ"
+#import "models.typ"
 #import "report.typ"
 #import "forces.typ" as force-enumeration
 #import "annotations.typ": dimension
@@ -321,7 +322,7 @@
   _validate-situation(s, "solve()")
   validation.validate-enum(
     find,
-    (auto, "acceleration", "normal", "friction", "regime"),
+    (auto, "acceleration", "normal", "friction", "regime", "tension"),
     "solve()",
     "find",
   )
@@ -340,6 +341,38 @@
   )
 }
 
+// Which body a view means when the situation has more than one. Views that
+// enumerate rather than answer still need to pick a body, and they must do it
+// without asking whether that body can be solved.
+#let _named-or-only-body(s, arguments, public-function) = {
+  let chosen-body-name = _chosen-body(s, arguments, public-function)
+  if chosen-body-name != auto { return chosen-body-name }
+  let body-names = s.body-order
+  assert(
+    body-names.len() > 0,
+    message: "typed-physics: this situation has no bodies",
+  )
+  assert(
+    body-names.len() == 1,
+    message: (
+      "typed-physics: "
+        + public-function
+        + " describes one body at a time; this situation has "
+        + str(body-names.len())
+        + " ("
+        + body-names.join(", ")
+        + ") — pass the body name positionally, for example `"
+        + public-function.replace("()", "")
+        + "(s, \""
+        + body-names.first()
+        + "\")`"
+    ),
+  )
+  body-names.first()
+}
+
+// The forces on a body are enumerated from its declaration, so the table stands
+// whether or not a model was able to fill in the magnitudes.
 #let force-table(s, ..name, assume: auto) = {
   _validate-situation(s, "force-table()")
   validation.validate-enum(
@@ -348,17 +381,33 @@
     "force-table()",
     "assume",
   )
-  let solution = _solved-body(
-    s,
-    _chosen-body(s, name, "force-table()"),
-    assume,
-  )
+  let body-name = _named-or-only-body(s, name, "force-table()")
+  let solution = if solver.body-can-be-balanced(s, body-name) {
+    solver.solve-body(s, body-name, assume: assume)
+  } else {
+    none
+  }
   report.typeset-force-table(
     s,
-    solution.body,
-    solution: if solution.status == "solved" { solution } else { none },
+    body-name,
+    solution: if solution != none and solution.status == "solved" {
+      solution
+    } else { none },
   )
 }
+
+// ── Scope ────────────────────────────────────────────────────────────────────
+
+// Which model a body falls under, or `none`. An author can ask before writing
+// `solve()`, and a document can branch on the answer instead of on an error.
+#let model-of(s, ..name) = {
+  _validate-situation(s, "model-of()")
+  models.recognize-model(s, _named-or-only-body(s, name, "model-of()")).id
+}
+
+// Every model this release solves, as plain data, so a document can list the
+// scope rather than restate it.
+#let solved-models() = models.solved-models
 
 #let results(s, ..name, assume: auto) = {
   _validate-situation(s, "results()")

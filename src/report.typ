@@ -1,4 +1,4 @@
-// Typesetting a quantity the solver found.
+// Typesetting a quantity a model determined.
 //
 // The package states quantities; the argument around them is the author's to
 // write. Nothing here composes a sentence that a document in another language
@@ -6,67 +6,75 @@
 
 #import "expression.typ"
 #import "forces.typ" as force-enumeration
+#import "models.typ"
 
 #let newtons = $"N"$
 #let metres-per-second-squared = $"m/s"^2$
 
-#let _with-unit(rendered-value, unit) = if unit == none {
-  rendered-value
-} else {
-  $#rendered-value thin #unit$
-}
-
-// What is left of an expression once every quantity that has a number is
-// replaced by it. A fully known term reaches a value, a fully symbolic one does
-// not move, and a mixed one lands somewhere in between.
-#let _partially-evaluated(term) = {
-  let folded-term = expression.evaluated-where-known(term)
-  if folded-term == term { none } else { folded-term }
-}
-
-// A stated quantity is the value when every quantity behind it carries one, and
-// otherwise the expression carried as far as the declared numbers reach.
-#let _typeset-stated-value(symbol, term, unit: none) = {
-  let numeric-value = expression.numeric-math-of(term)
-  if numeric-value != none {
-    return $#symbol = #_with-unit(numeric-value, unit)$
-  }
-  let folded-term = _partially-evaluated(term)
-  if folded-term != none {
-    return $#symbol = #_with-unit(expression.math-of(folded-term), unit)$
-  }
-  $#symbol = #expression.math-of(term)$
-}
+#let _typeset-stated-value = expression.stated-value
 
 // Where the body goes, said the way the figure reads: a slope has an uphill and
-// a downhill, level ground only has a left and a right. Written in English, so
-// `direction: false` is how a document in another language leaves it out.
+// a downhill, a wall has an up and a down, and level ground only has a left and
+// a right. Written in English, so `direction: false` is how a document in
+// another language leaves it out.
 #let _motion-direction-words(scene, solution) = {
   let support-surface = scene.surfaces.at(solution.surface)
+  let motion-is-vertical = (
+    calc.abs(solution.motion.at(1)) > calc.abs(solution.motion.at(0))
+  )
   if support-surface.kind == "ramp" {
     if solution.downhill { "down the incline" } else { "up the incline" }
+  } else if motion-is-vertical {
+    if solution.motion.at(1) < 0 {
+      "down the " + support-surface.kind
+    } else { "up the " + support-surface.kind }
   } else if solution.motion.at(0) >= 0 { "to the right" } else { "to the left" }
 }
 
 // What a problem asks for when it does not say. A body that stays put has
-// already answered the interesting question with its regime.
-#let _quantity-asked-for(solution) = if solution.regime == "static" {
-  "regime"
-} else {
-  "acceleration"
+// already answered the interesting question with its regime, and a hanging body
+// was only ever asked one thing.
+#let _quantity-asked-for(solution) = {
+  if solution.model == "hanging-body" { return "tension" }
+  if solution.regime == "static" { "regime" } else { "acceleration" }
 }
+
+// A model determines the quantities it was written to determine, and asking it
+// for another is answered with the list rather than with a number from
+// somewhere else.
+#let _validate-requested-quantity(solution, asked-for) = {
+  let matched-model = models.model-named(solution.model)
+  assert(
+    asked-for in matched-model.asks,
+    message: (
+      "typed-physics: solve(find: "
+        + repr(asked-for)
+        + ") asks for a quantity the "
+        + solution.model
+        + " model does not determine; \""
+        + solution.body
+        + "\" matched that model, which gives "
+        + matched-model.asks.map(quantity => repr(quantity)).join(", ")
+    ),
+  )
+}
+
+#let _typeset-hanging-answer(solution) = _typeset-stated-value(
+  $T$,
+  solution.tension.expression,
+  unit: newtons,
+)
 
 #let typeset-answer(scene, solution, find: auto, direction: true) = {
   let solution-is-undetermined = solution.status == "undetermined"
   let asked-for = if find == auto {
-    if solution-is-undetermined {
-      "regime"
-    } else { _quantity-asked-for(solution) }
+    if solution-is-undetermined { "regime" } else {
+      _quantity-asked-for(solution)
+    }
   } else { find }
-  assert(
-    asked-for in ("acceleration", "normal", "friction", "regime"),
-    message: "typed-physics: solve(find:) takes \"acceleration\", \"normal\", \"friction\" or \"regime\", got " + repr(find),
-  )
+  _validate-requested-quantity(solution, asked-for)
+
+  if solution.model == "hanging-body" { return _typeset-hanging-answer(solution) }
 
   // The normal force falls out of the balance across the surface, which does
   // not depend on which way the body is about to go.
@@ -105,8 +113,11 @@
   [#stated-acceleration, #_motion-direction-words(scene, solution)]
 }
 
-// Every force on a body with its components in the surface's own axes: the
-// bookkeeping behind the free-body diagram, in the order the diagram draws it.
+// Every force on a body with its components in the axes the body is balanced
+// in: the surface's own for a body resting on one, and the world's for a body
+// hanging from something. The bookkeeping behind the free-body diagram, in the
+// order the diagram draws it, and available whether or not a model gave the
+// magnitudes.
 #let typeset-force-table(scene, name, solution: none) = {
   let body = scene.bodies.at(name)
   let acting-forces = force-enumeration.enumerate-forces(
@@ -114,6 +125,11 @@
     name,
     solution: solution,
   )
+  let body-rests-on-a-surface = body.support != none
+  let first-axis = if body-rests-on-a-surface { body.direction } else { (1, 0) }
+  let second-axis = if body-rests-on-a-surface { body.outward-normal } else {
+    (0, 1)
+  }
   let force-component-cell(force, axis-direction) = {
     if force.magnitude == none { return [—] }
     let force-magnitude = expression.value-of(force.magnitude)
@@ -129,7 +145,12 @@
     align: (left, right, right, right),
     stroke: none,
     table.hline(),
-    table.header([Force], [Magnitude (N)], [Along], [Out of surface]),
+    table.header(
+      [Force],
+      [Magnitude (N)],
+      if body-rests-on-a-surface { [Along] } else { [Horizontal] },
+      if body-rests-on-a-surface { [Out of surface] } else { [Vertical] },
+    ),
     table.hline(),
     ..acting-forces
       .map(force => (
@@ -142,8 +163,8 @@
             [#expression.format-number(force-magnitude)]
           }
         },
-        force-component-cell(force, body.direction),
-        force-component-cell(force, body.outward-normal),
+        force-component-cell(force, first-axis),
+        force-component-cell(force, second-axis),
       ))
       .flatten(),
     table.hline(),

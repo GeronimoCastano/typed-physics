@@ -196,3 +196,90 @@
   ),
   labels: "value",
 )
+
+// Every model, every quantity it determines, and the views that do not need one.
+#let wall-situation = situation(
+  wall("side", side: left, height: 4),
+  block("pressed", mass: 4, on: "side", at: 45%, mu: (s: 0.5, k: 0.4)),
+  force(on: "pressed", magnitude: 120, angle: 180deg),
+)
+#let ceiling-situation = situation(
+  ceiling("roof", length: 6, height: 3),
+  block("held", mass: 2, on: "roof", at: 50%, mu: 0.3),
+  force(on: "held", magnitude: 50, angle: 90deg),
+)
+#let hanging-situation = situation(
+  ceiling("beam", length: 6, height: 3),
+  block("bob", mass: 3, hanging: (on: "beam", at: 50%)),
+  rope("cord", from: (on: "beam", at: 50%), to: "bob.top"),
+)
+#let unmodelled-situation = situation(
+  arc("bowl", radius: 3),
+  block("slider", mass: 2, on: "bowl", at: 50%),
+)
+
+#for solvable in (wall-situation, ceiling-situation) {
+  scene(solvable, forces: true)
+  fbd(solvable, solvable.body-order.first())
+  solve(solvable, find: "normal")
+  solve(solvable, find: "friction")
+  solve(solvable, find: "regime")
+  force-table(solvable)
+  repr(model-of(solvable))
+}
+
+#solve(hanging-situation)
+#solve(hanging-situation, find: "tension")
+#fbd(hanging-situation, "bob")
+#force-table(hanging-situation, "bob")
+#repr(model-of(hanging-situation, "bob"))
+
+// A body no model matches still draws and still enumerates its forces.
+#scene(unmodelled-situation)
+#fbd(unmodelled-situation, "slider")
+#force-table(unmodelled-situation, "slider")
+#repr(model-of(unmodelled-situation, "slider"))
+#repr(solved-models().map(model => model.id))
+
+// Symbolic and numeric circuits, every derived quantity, and the component table.
+#let mixed-circuit = electricity.dc-circuit(
+  electricity.voltage-source("supply", voltage: 12),
+  electricity.series(
+    electricity.resistor("first", resistance: 4),
+    electricity.parallel(
+      electricity.resistor("second", resistance: 6),
+      electricity.capacitor("store", capacitance: 220, unit: "µF"),
+    ),
+  ),
+)
+#electricity.solve(mixed-circuit)
+#electricity.solve(mixed-circuit, find: "current")
+#electricity.solve(mixed-circuit, find: "voltage")
+#electricity.solve(mixed-circuit, "second", find: "current")
+#electricity.solve(mixed-circuit, "store")
+#electricity.component-table(mixed-circuit)
+#repr(electricity.results(mixed-circuit).regime)
+
+#let capacitive-circuit = electricity.dc-circuit(
+  electricity.voltage-source("cell", voltage: 12),
+  electricity.parallel(
+    electricity.capacitor("upper", capacitance: 2),
+    electricity.series(
+      electricity.capacitor("lower-first", capacitance: 3),
+      electricity.capacitor("lower-second", capacitance: 6),
+    ),
+  ),
+)
+#electricity.solve(capacitive-circuit)
+#electricity.solve(capacitive-circuit, "lower-first")
+#electricity.component-table(capacitive-circuit)
+
+#let symbolic-circuit = electricity.dc-circuit(
+  electricity.voltage-source("source"),
+  electricity.parallel(
+    electricity.resistor("left"),
+    electricity.resistor("right"),
+  ),
+)
+#electricity.solve(symbolic-circuit)
+#electricity.solve(symbolic-circuit, find: "current")

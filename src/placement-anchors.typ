@@ -16,6 +16,17 @@
   )
 }
 
+// The element an attachment reference names, or `none` when it names a bare
+// coordinate. This is how a declaration that only says where something is can
+// still be read as saying what it reaches.
+#let attachment-element-name(attachment) = {
+  if type(attachment) == dictionary {
+    return attachment.at("on", default: none)
+  }
+  if type(attachment) != str { return none }
+  split-anchor-reference(attachment).element
+}
+
 #let surface-anchor-positions(surface) = {
   let anchor-positions = (
     start: surface.start,

@@ -20,6 +20,67 @@
 #let _resolve-torque-geometry = structures.resolve-torque-geometry
 #let _resolve-connector-geometry = connectors.resolve-connector-geometry
 
+// Which declared elements reach each body. A connector, a rigid structure, a
+// neighbouring body, or an applied torque all put something on a body that the
+// body's own declaration does not mention, and a later stage cannot see that in
+// the geometry alone because placement resolves every reference to a point.
+//
+// Loads, velocities, and angular velocities are deliberately absent: they state
+// a quantity rather than introducing one, so they never join a body to
+// anything else.
+#let _elements-reaching-bodies(declarations, body-names) = {
+  let reaching-elements = (:)
+  for body-name in body-names { reaching-elements.insert(body-name, ()) }
+  for declaration in declarations {
+    let declaration-kind = declaration.kind
+    let references = if declaration-kind in ("rope", "spring", "rod") {
+      (declaration.from, declaration.to)
+    } else if declaration-kind in ("pivot", "support") {
+      (declaration.at,)
+    } else if declaration-kind == "pendulum" {
+      (declaration.from,)
+    } else if declaration-kind == "torque" {
+      (declaration.on,)
+    } else if declaration-kind == "body" {
+      (declaration.touching, declaration.hanging)
+    } else {
+      ()
+    }
+    let declared-name = if "name" in declaration { declaration.name } else {
+      none
+    }
+    // A connector spans two attachments, and which one is at its far end
+    // decides whether the force it carries is shared. A connector that runs
+    // over a pulley reaches whatever is on the other side of the wheel, so the
+    // pulley is the far end that matters.
+    let connector-endpoints = if declaration-kind in ("rope", "spring") {
+      if "over" in declaration and declaration.over != none {
+        (declaration.over, declaration.over)
+      } else {
+        (
+          anchors.attachment-element-name(declaration.to),
+          anchors.attachment-element-name(declaration.from),
+        )
+      }
+    } else { none }
+    for (reference-index, reference) in references.enumerate() {
+      if reference == none { continue }
+      let referenced-name = anchors.attachment-element-name(reference)
+      if referenced-name == none { continue }
+      if referenced-name not in reaching-elements { continue }
+      if referenced-name == declared-name { continue }
+      reaching-elements.at(referenced-name).push((
+        kind: declaration-kind,
+        name: declared-name,
+        far-end: if connector-endpoints == none { none } else {
+          connector-endpoints.at(reference-index)
+        },
+      ))
+    }
+  }
+  reaching-elements
+}
+
 #let resolve-situation-geometry(declarations, gravity: 9.81) = {
   validation.validate-situation-declarations(declarations, gravity)
   let declared-element-names = ()
@@ -315,6 +376,14 @@
       style: angular-velocity-declaration.style,
     ))
     placed-bodies.at(body-name) = rotating-body
+  }
+
+  let elements-reaching-bodies = _elements-reaching-bodies(
+    declarations,
+    placed-bodies.keys(),
+  )
+  for (body-name, reaching-elements) in elements-reaching-bodies {
+    placed-bodies.at(body-name).reached-by = reaching-elements
   }
 
   (

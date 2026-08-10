@@ -1,9 +1,14 @@
-// Balancing one body against the surface it rests on.
+// Balancing one body, in whichever model recognized its situation.
 //
-// The solver works in the surface's own axes: along it, positive up the slope,
-// and out of it. Every equation below is written once in that frame and holds
-// for level ground too, because level ground carries an exact zero for its
-// inclination and the sines and cosines fold away on their own.
+// `models.typ` decides which named model a body falls under; this module
+// applies it. Each model is written the way a textbook states it, so a reader
+// can follow the closed form rather than a general procedure, and each returns
+// the quantities that model actually determines.
+//
+// The contact model works in the surface's own axes: along it, positive up the
+// slope, and out of it. Every equation below is written once in that frame and
+// holds for level ground too, because level ground carries an exact zero for
+// its inclination and the sines and cosines fold away on their own.
 //
 // The friction regime is decided, not assumed. Whether the required static
 // friction fits inside what the contact can supply is the question a figure
@@ -12,48 +17,11 @@
 
 #import "expression.typ"
 #import "forces.typ"
+#import "models.typ"
 #import "vector.typ"
 #import "validation.typ"
 
-#let _validate-body-can-be-solved(scene, body-name) = {
-  let body = scene.bodies.at(body-name)
-  assert(
-    body.solver-supported,
-    message: "typed-physics: \"" + body-name + "\" is a drawing-only " + body.shape + " and is not supported by solve()",
-  )
-  assert(
-    body.support != none,
-    message: "typed-physics: block \"" + body-name + "\" rests on nothing, so there is nothing to balance it against",
-  )
-  let support-surface = scene.surfaces.at(body.support)
-  assert(
-    support-surface.kind in ("ground", "ramp"),
-    message: (
-      "typed-physics 0.1.0 solves a body resting on a ground or a ramp; \""
-        + body-name
-        + "\" rests on a "
-        + support-surface.kind
-        + ", which needs the connectors planned for a later version"
-    ),
-  )
-  assert(
-    body.mass != none,
-    message: "typed-physics: block \"" + body-name + "\" needs a `mass:` before it can be solved",
-  )
-}
-
-// Whether balancing this body is a case the solver handles at all. Drawing a
-// body must never depend on the answer, so the views ask this first and fall
-// back to an unsolved figure rather than to an error.
-#let body-can-be-balanced(scene, body-name) = {
-  let body = scene.bodies.at(body-name)
-  if not body.solver-supported { return false }
-  if body.support == none { return false }
-  if scene.surfaces.at(body.support).kind not in ("ground", "ramp") {
-    return false
-  }
-  body.mass != none
-}
+#let body-can-be-balanced = models.body-can-be-balanced
 
 #let _determine-friction-regime(
   net-force-along-surface-value,
@@ -94,40 +62,22 @@
   [the available static friction is symbolic]
 }
 
-// Balances `name` and reports the regime it lands in. The result is a plain
-// dictionary so a caller can typeset it, draw it, or read a single number out
-// of it without going through the report.
-#let solve-body(scene, name, assume: auto) = {
-  validation.validate-body-name(scene, name, "solve()")
-  validation.validate-enum(
-    assume,
-    (auto, "static", "sliding"),
-    "solve()",
-    "assume",
-  )
-  _validate-body-can-be-solved(scene, name)
-
+// One body held in equilibrium across its contact and balanced along it. The
+// surface may be a ground, a ramp, a wall, or a ceiling: the frame comes from
+// the placed axes, so the same equations hold whichever way the contact faces.
+#let _balance-body-on-contact(scene, name, assume) = {
   let body = scene.bodies.at(name)
   let support-surface = scene.surfaces.at(body.support)
   let surface-inclination = body.inclination-quantity
   let weight-force-magnitude = expression.product(body.mass, scene.gravity)
 
-  let signed-force-components-along-surface = (
-    expression.negated(
-      expression.product(
-        weight-force-magnitude,
-        expression.sine(surface-inclination),
-      ),
-    ),
+  let weight-components = forces.weight-components-in-surface-frame(
+    body,
+    support-surface,
+    weight-force-magnitude,
   )
-  let signed-force-components-outward-normal = (
-    expression.negated(
-      expression.product(
-        weight-force-magnitude,
-        expression.cosine(surface-inclination),
-      ),
-    ),
-  )
+  let signed-force-components-along-surface = (weight-components.along,)
+  let signed-force-components-outward-normal = (weight-components.normal,)
   for applied-load in body.loads {
     let load-components = forces.resolve-load-components-in-surface-frame(
       applied-load,
@@ -148,7 +98,11 @@
         + name
         + "\" comes out negative ("
         + expression.format-number(normal-force-value)
-        + " N), so it leaves the surface instead of resting on it"
+        + " N), so it is pulled away from "
+        + support-surface.kind
+        + " \""
+        + support-surface.name
+        + "\" instead of pressed against it; add the force that holds it there"
     ),
   )
   let normal-force-quantity = expression.quantity(
@@ -184,6 +138,7 @@
   if friction-regime == none {
     return (
       status: "undetermined",
+      model: "single-contact-body",
       body: name,
       surface: support-surface.name,
       normal: (
@@ -248,6 +203,7 @@
 
   (
     status: "solved",
+    model: "single-contact-body",
     body: name,
     surface: support-surface.name,
     regime: friction-regime,
@@ -290,9 +246,59 @@
   )
 }
 
-// The situation's solution, once there is a way to solve more than one body at
-// a time. Until then the single supported body is the answer, and anything
-// else says so rather than guessing.
+// A body hanging at rest below a fixed attachment. Placement puts it directly
+// under the point it hangs from, so the rope is vertical and the whole weight
+// stands in the tension.
+#let _balance-hanging-body(scene, name) = {
+  let body = scene.bodies.at(name)
+  let weight-force-magnitude = expression.product(body.mass, scene.gravity)
+  (
+    status: "solved",
+    model: "hanging-body",
+    body: name,
+    attachment: body.hangs-from-element,
+    weight: (
+      expression: weight-force-magnitude,
+      value: expression.value-of(weight-force-magnitude),
+    ),
+    tension: (
+      expression: weight-force-magnitude,
+      value: expression.value-of(weight-force-magnitude),
+      direction: (0, 1),
+    ),
+  )
+}
+
+// Balances `name` under whichever model recognized it. The result is a plain
+// dictionary so a caller can typeset it, draw it, or read a single number out
+// of it without going through the report, and it names the model it came from
+// because different models determine different quantities.
+#let solve-body(scene, name, assume: auto) = {
+  validation.validate-body-name(scene, name, "solve()")
+  validation.validate-enum(
+    assume,
+    (auto, "static", "sliding"),
+    "solve()",
+    "assume",
+  )
+  let model-id = models.require-model(scene, name)
+
+  if model-id == "hanging-body" {
+    assert(
+      assume == auto,
+      message: (
+        "typed-physics: solve(assume:) chooses a friction regime, and \""
+          + name
+          + "\" matches the hanging-body model, which has no contact to rub; remove `assume:`"
+      ),
+    )
+    return _balance-hanging-body(scene, name)
+  }
+  _balance-body-on-contact(scene, name, assume)
+}
+
+// The situation's solution. A situation with one body needs no name; naming one
+// is how a situation with several says which it means.
 #let solve-situation(scene, body: auto, assume: auto) = {
   validation.validate-enum(
     assume,
@@ -312,7 +318,7 @@
   assert(
     body-names.len() == 1,
     message: (
-      "typed-physics 0.1.0 solves one body at a time; this situation has "
+      "typed-physics: every model here solves one body at a time; this situation has "
         + str(body-names.len())
         + " ("
         + body-names.join(", ")

@@ -293,6 +293,121 @@
       electricity.resistor("R2", resistance: 2),
     ),
   )
+} else if selected-case == "no-model-matches" {
+  let s = situation(
+    arc("loop", radius: 3),
+    block("P", mass: 2, on: "loop", at: 50%),
+  )
+  solve(s, "P")
+} else if selected-case == "model-mismatch-lists-scope" {
+  let s = situation(
+    ground("floor"),
+    block("A", mass: 2, on: "floor", at: 30%),
+    block("B", mass: 3, touching: "A"),
+  )
+  solve(s, "A")
+} else if selected-case == "shared-tension" {
+  let s = situation(
+    ground("floor"),
+    block("A", mass: 2, on: "floor", at: 30%),
+    pulley("wheel", at: "floor.end"),
+    rope("cord", from: "A", to: "wheel"),
+  )
+  solve(s, "A")
+} else if selected-case == "indeterminate-tie" {
+  let s = situation(
+    ground("floor", length: 7),
+    wall("side", side: right),
+    block("A", mass: 2, on: "floor", at: 40%, mu: 0.4),
+    rope("tie", from: "A", to: "side"),
+  )
+  solve(s, "A")
+} else if selected-case == "two-holding-connectors" {
+  let s = situation(
+    ceiling("roof"),
+    block("H", mass: 3, hanging: "roof"),
+    rope("left-cord", from: "roof.start", to: "H.top"),
+    rope("right-cord", from: "roof.end", to: "H.top"),
+  )
+  solve(s, "H")
+} else if selected-case == "quantity-outside-model" {
+  let s = situation(ceiling("roof"), block("H", mass: 3, hanging: "roof"))
+  solve(s, "H", find: "normal")
+} else if selected-case == "assume-without-contact" {
+  let s = situation(ceiling("roof"), block("H", mass: 3, hanging: "roof"))
+  solve(s, "H", assume: "static")
+} else if selected-case == "body-pulled-off-surface" {
+  let s = situation(
+    ceiling("roof", length: 6),
+    block("B", mass: 2, on: "roof", at: 50%),
+  )
+  solve(s, "B")
+} else if selected-case == "unknown-find-quantity" {
+  let s = situation(ground("floor"), block("A", mass: 2, on: "floor", at: 30%))
+  solve(s, "A", find: "momentum")
+} else if selected-case == "ambiguous-model-of" {
+  let s = situation(
+    ground("floor"),
+    block("A", mass: 2, on: "floor", at: 20%),
+    block("B", mass: 2, on: "floor", at: 70%),
+  )
+  model-of(s)
+} else if selected-case == "electrical-mixed-resistor-units" {
+  electricity.solve(electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 12),
+    electricity.series(
+      electricity.resistor("R1", resistance: 4),
+      electricity.resistor("R2", resistance: 2, unit: "kΩ"),
+    ),
+  ))
+} else if selected-case == "electrical-mixed-capacitor-units" {
+  electricity.results(electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 12),
+    electricity.series(
+      electricity.capacitor("C1", capacitance: 4, unit: "µF"),
+      electricity.capacitor("C2", capacitance: 2, unit: "nF"),
+    ),
+  ))
+} else if selected-case == "electrical-blocked-current" {
+  electricity.solve(electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 12),
+    electricity.series(
+      electricity.capacitor("C1", capacitance: 2),
+      electricity.capacitor("C2", capacitance: 3),
+    ),
+  ), find: "current")
+} else if selected-case == "electrical-capacitance-with-resistors" {
+  electricity.solve(electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 12),
+    electricity.series(
+      electricity.resistor("R1", resistance: 4),
+      electricity.capacitor("C1", capacitance: 2),
+    ),
+  ), find: "capacitance")
+} else if selected-case == "electrical-quantity-wrong-kind" {
+  electricity.solve(electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 12),
+    electricity.series(
+      electricity.resistor("R1", resistance: 4),
+      electricity.resistor("R2", resistance: 6),
+    ),
+  ), "R1", find: "capacitance")
+} else if selected-case == "electrical-unknown-component" {
+  electricity.solve(electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 12),
+    electricity.series(
+      electricity.resistor("R1", resistance: 4),
+      electricity.resistor("R2", resistance: 6),
+    ),
+  ), "R9")
+} else if selected-case == "electrical-unknown-find" {
+  electricity.solve(electricity.dc-circuit(
+    electricity.voltage-source("V", voltage: 12),
+    electricity.series(
+      electricity.resistor("R1", resistance: 4),
+      electricity.resistor("R2", resistance: 6),
+    ),
+  ), find: "power")
 } else {
   panic("diagnostic harness: unknown case " + repr(selected-case))
 }

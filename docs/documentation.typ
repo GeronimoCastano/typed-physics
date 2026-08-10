@@ -89,6 +89,8 @@
   solve: physics.solve,
   force-table: physics.force-table,
   results: physics.results,
+  model-of: physics.model-of,
+  solved-models: physics.solved-models,
   draw: physics.draw,
   theme: physics.theme,
   block-style: physics.block-style,
@@ -552,6 +554,8 @@ reference explain what the arguments mean and show live examples.
 #force-table(s, ..name, assume: auto)
 #results(s, ..name, assume: auto)
 #forces(s, name)
+#model-of(s, ..name)
+#solved-models()
 ```
 
 == Element style builders
@@ -590,6 +594,10 @@ collide with mechanics declarations.
 #e.diagram(circuit, labels: "both", fold: auto, style: (:))
 #e.draw(circuit, labels: "both", fold: auto, style: (:))
 
+#e.solve(circuit, ..name, find: auto)
+#e.results(circuit)
+#e.component-table(circuit)
+
 #e.resistor-style(symbol: auto, fill: auto, stroke: auto, text: auto)
 #e.capacitor-style(stroke: auto, text: auto)
 #e.voltage-source-style(symbol: auto, fill: auto, stroke: auto, text: auto)
@@ -605,10 +613,9 @@ Authors declare which resistors and capacitors are in series and which paths
 are in parallel; the package chooses positions, branch spacing, wire routes,
 junctions, source placement, and component rotation.
 
-This is intentionally a drawing-only electrical release. Values are carried by
-the declarations and printed consistently, but they are not evaluated. There
-is no equivalent-resistance or capacitance, charge, current, voltage-drop,
-power, transient, Ohm's-law, or Kirchhoff solver yet.
+A circuit is declared once and both its figure and its quantities are derived
+from that declaration. @circuit-quantities covers what it settles at; the
+sections below cover declaring and drawing it.
 
 == Declaring a DC circuit
 
@@ -931,17 +938,104 @@ one declaration. #c("capacitor-style") accepts #c("stroke:") and #c("text:")
 for the conventional two-plate symbol. Component styles override the diagram
 defaults for that declaration only.
 
+== What a circuit settles at <circuit-quantities>
+
+Series resistances add, parallel resistances add as reciprocals, and
+capacitances do the opposite. Your declaration is already that tree, so nothing
+has to discover a topology you did not write: reduction is *total* over every
+network #c("series") and #c("parallel") can compose. There is no model to match
+here, because there is no network in this grammar that reduction cannot finish.
+
+```typ
+#e.solve(circuit, ..name, find: auto)
+#e.results(circuit)
+#e.component-table(circuit)
+```
+
+#c("solve") states one quantity. Name a component to ask about that component,
+or leave the name out to ask about the circuit as a whole.
+
+#reference-table(
+  [*Value*], [*What you get*],
+  [#c("\"resistance\"")], [The equivalent resistance, or one resistor's own.],
+  [#c("\"capacitance\"")], [The equivalent capacitance, or one capacitor's own.],
+  [#c("\"voltage\"")], [The supply voltage, or the voltage across one component.],
+  [#c("\"current\"")], [The current the source drives, or the current through one component.],
+  [#c("auto")], [The circuit's resistance, or its capacitance when no steady current passes; a named component's voltage.],
+)
+
+#demo[
+  #report-example(```typ
+  #let e = electricity
+
+  #let circuit = e.dc-circuit(
+    e.voltage-source("V", voltage: 12),
+    e.series(
+      e.resistor("R1", resistance: 4),
+      e.parallel(
+        e.resistor("R2", resistance: 6),
+        e.capacitor("C1", capacitance: 220, unit: "µF"),
+      ),
+    ),
+  )
+  #e.solve(circuit) \
+  #e.solve(circuit, find: "current") \
+  #e.solve(circuit, "C1")
+  ```)
+]
+
+A network with no numbers reduces to a closed form instead of to a value, the
+same way a mechanics situation does.
+
+=== The steady state is decided, not assumed
+
+Every quantity above describes the circuit after charging has finished. In that
+state a capacitor carries no current, which has three consequences worth
+knowing:
+
+- A capacitor in *parallel* with a resistor simply sits at that resistor's
+  voltage and draws nothing.
+- A capacitor in *series* stops the current in its whole branch. A circuit whose
+  every path runs through a capacitor passes no current at all, and asking it for
+  a #c("\"current\"") or a #c("\"resistance\"") says so rather than returning
+  zero without explanation.
+- The voltage a currentless branch does not drop across its resistors stands
+  across its capacitors instead, dividing between them as $Q slash C$.
+
+#c("results()") carries #c("regime: \"dc-steady-state\"") so a document can
+state which condition it is quoting. Nothing here describes the transient that
+led to it.
+
+=== Units
+
+A #c("unit:") is display text, and the number beside it is measured in that
+unit. Combining #c("4") declared in ohms with #c("2") declared in kilohms would
+be adding two different things, so a derivation refuses to: every resistor in a
+circuit must share one unit, and every capacitor must share one. An equivalent
+is then stated in that same unit. A current is named in amperes only when the
+resistances are in ohms and the source in volts.
+
+Drawing is unaffected — #c("diagram()") never combines values, so a figure may
+mix units freely.
+
 == Electrical scope
 
 This release covers all two-terminal networks made from ideal resistors and
-capacitors that #c("series") and #c("parallel") can compose. #c("route:") and
-the return rail place an already declared topology; they do not change what is
-connected to what.
+capacitors that #c("series") and #c("parallel") can compose, and derives what
+every one of them settles at. #c("route:") and the return rail place an already
+declared topology; they do not change what is connected to what.
+
+A topology #c("series") and #c("parallel") cannot compose — a bridge network is
+the usual example — cannot be written in this grammar at all, so the hard case
+is excluded by what you can declare rather than by a guard inside the
+derivation.
 
 Inductors, switches, meters, multiple or dependent sources, nonlinear devices,
-current arrows, voltage-polarity annotations, and every form of circuit solving
-are outside this drawing release. Capacitors are drawing declarations only;
-there is no charge, transient, impedance, or frequency-domain solver.
+current arrows, and voltage-polarity annotations are outside this release.
+Transient, impedance, and frequency-domain behaviour are too: the quantities
+here are the DC steady state and nothing else. Charge is not reported, because
+its unit follows from the unit the capacitance was declared in and this release
+has no unit algebra; $Q = C V$ from a capacitor's voltage is one multiplication.
 
 // ═════════════════════════════════════════════════════════════════════════════
 = Declaring a situation
@@ -1015,8 +1109,10 @@ drawn under it.
   ```)
 ]
 
-Walls and a ceiling bound the scene. Bodies can rest against them, but 0.1.0
-cannot solve a body they support.
+Walls and a ceiling bound the scene. A body resting against one is a single
+contact like any other, so the same model balances it: a wall's own axes run up
+and out of it, and a ceiling's outward normal points down, which is why a body
+held against one needs a force pressing it there.
 
 #demo[
   #example(```typ
@@ -1250,8 +1346,10 @@ with no #c("mu:") is frictionless.
   [#c("radius:")], [How big the wheel is.],
 )
 
-Connectors are drawn, not solved. A rope tells the free-body diagram that a
-tension acts along it, with a magnitude the package leaves open.
+A rope tells the free-body diagram that a tension acts along it. Its magnitude
+is found only when the rope is the single thing holding a hanging body up; a
+rope joining two bodies, or running over a pulley, carries one unknown to both
+of its ends, and @models says why that is declined.
 
 #demo[
   #example(```typ
@@ -1926,6 +2024,83 @@ typed-physics states quantities and stops there. It does not write the argument
 that connects them, because that argument belongs to your document, in your
 words and your language.
 
+== What gets solved <models>
+
+A situation reaches an answer in closed form when its unknowns can be put in an
+order where each one is determined by unknowns already found. That order exists
+whenever a body shares no unknown force with anything else that can move. Two
+bodies joined by a rope share a tension; two bodies in contact share a pair of
+contact forces; a body on a curved support carries a centripetal acceleration no
+declaration states. Each of those couples equations that then have to be solved
+together, and this release does not solve them together.
+
+So the package does not have a general solver. It has a list of *models*, each
+one a shape it recognizes and a closed form it applies:
+
+#reference-table(
+  [*Model*], [*What it is*],
+  [#c("\"single-contact-body\"")],
+  [One body with a #c("mass:") resting on a #c("ground"), #c("ramp"),
+   #c("wall"), or #c("ceiling"), carrying only the loads its own declaration
+   states. Gives the normal force, the friction force, the regime, and the
+   acceleration.],
+  [#c("\"hanging-body\"")],
+  [One body with a #c("mass:") hanging from a fixed attachment, with nothing
+   else on the rope that holds it. Gives the tension.],
+)
+
+#c("model-of") names the model a body falls under, or #c("none"), before
+anything is solved:
+
+```typ
+#model-of(s, ..name)
+```
+
+#c("solved-models()") returns that table as data, so a document can list the
+scope rather than restate it.
+
+A situation outside the list is declined by name. The message says which shared
+unknown was found and lists the models that exist, rather than promising a
+version that will cover it:
+
+```text
+typed-physics: no solved model matches "A": body "B" rests against it, and
+two bodies in contact share a pair of contact forces that has to be found
+together with their motion.
+```
+
+#note[
+  No figure goes through a model. #c("scene()"), #c("fbd()"),
+  #c("components()"), #c("forces()"), and #c("force-table()") are derived from
+  the declaration alone, so a situation nothing solves still draws, still shows
+  its free-body diagram, and still lists the forces acting — with the magnitudes
+  a model would have supplied left blank. Declining costs you the number and
+  nothing else.
+]
+
+#demo[
+  #report-example(```typ
+  #let held = situation(
+    wall("side", side: left, height: 3),
+    block("A", mass: 4, on: "side", at: 45%,
+      mu: (s: 0.50, k: 0.40)),
+    force(on: "A", magnitude: 120, angle: 180deg),
+  )
+  #let stacked = situation(
+    ground("floor", length: 6),
+    block("L", mass: 3, on: "floor", at: 35%),
+    block("R", mass: 2, touching: "L"),
+  )
+
+  A block held against a wall matches
+  #raw(repr(model-of(held, "A"))), and answers:
+  #solve(held, find: "regime"), #solve(held, find: "friction").
+
+  Two blocks in contact match #raw(repr(model-of(stacked, "L"))),
+  so they draw and enumerate but do not answer.
+  ```)
+]
+
 == #raw("solve()")
 
 ```typ
@@ -1940,8 +2115,13 @@ States one quantity. #c("find:") chooses which:
   [#c("\"normal\"")], [The normal force.],
   [#c("\"friction\"")], [The friction force acting, static or kinetic.],
   [#c("\"regime\"")], [Whether the body slides or stays put.],
-  [#c("auto")], [The acceleration for a sliding body, the regime for one that stays put.],
+  [#c("\"tension\"")], [The force in the rope holding a hanging body.],
+  [#c("auto")], [The acceleration for a sliding body, the regime for one that stays put, the tension for one that hangs.],
 )
+
+Each model determines its own quantities. Asking a model for one it does not
+have is answered with the list it does have, not with a number from somewhere
+else — a hanging body has no normal force, and asking for one says so.
 
 #c("direction: false") drops the words that say which way an acceleration
 points, leaving the quantity alone for a document that will phrase it itself.
@@ -1982,7 +2162,11 @@ points, leaving the quantity alone for a document that will phrase it itself.
 ```
 
 Every force on the body with its components along the surface and out of it, in
-the order the free-body diagram draws them.
+the order the free-body diagram draws them. A body hanging from something is
+tabulated in horizontal and vertical components instead, because it has no
+surface to be along. The table is derived from the declaration, so it stands for
+a body no model matches; the magnitudes a model would have filled in read as
+#c("—").
 
 #demo[
   #report-example(```typ
@@ -2007,6 +2191,7 @@ or table.
 #reference-table(
   [*Key*], [*What it holds*],
   [#c("status")], [#c("\"solved\"") or #c("\"undetermined\"").],
+  [#c("model")], [Which model produced this, so a document can tell which of the keys below to expect.],
   [#c("body"), #c("surface")], [The names involved.],
   [#c("regime")], [#c("\"static\"") or #c("\"sliding\"").],
   [#c("assumed")], [Whether #c("assume:") supplied the regime.],
@@ -2014,6 +2199,10 @@ or table.
   [#c("normal"), #c("friction"), #c("acceleration"), #c("weight"), #c("required"), #c("available")], [Each a dictionary with an #c("expression") and its #c("value"). #c("friction") and #c("acceleration") also carry a #c("direction").],
   [#c("motion"), #c("downhill")], [Which way the body would go.],
 )
+
+The keys above are what #c("\"single-contact-body\"") determines. A
+#c("\"hanging-body\"") result carries #c("model"), #c("body"),
+#c("attachment"), #c("weight"), and #c("tension") instead.
 
 #demo[
   #report-example(```typ
@@ -2313,27 +2502,38 @@ quantity is symbolic and how to state the regime instead.
 = What 0.1.0 does not do <limitations>
 // ═════════════════════════════════════════════════════════════════════════════
 
-The drawing vocabulary is where this package grows. The solver is deliberately
-still: it balances one body on a ground or a ramp and nothing else.
+The drawing vocabulary is the package; the solved models are a named, finite
+list that grows. This section says where that list ends today. Nothing here
+affects a figure: every limitation below costs you a number, never a diagram.
 
-- Solving anything a connector touches. Ropes, springs, and pulleys are drawn,
-  and a rope tells a free-body diagram that a tension acts, but no tension,
-  acceleration, or contact force between bodies is computed.
-- Solving a body supported by a wall or a ceiling, or hanging from anything.
-- Action–reaction pairs between touching bodies.
-- Force or moment balance for rods, supports, pivots, or applied torques. Those
-  elements draw but do not enter the solver.
-- Circular motion on an #c("arc"), rolling dynamics for #c("disk") or
-  #c("ring"), and pendulum motion. Their geometry draws and composes without a
-  derived acceleration.
+Mechanics is solved by the two models in @models. Outside them, the situation is
+declined by name and the reason is the shared unknown that was found:
+
+- *Anything a connector joins to a second movable thing.* Ropes, springs, and
+  pulleys draw, and a rope still tells a free-body diagram that a tension acts,
+  but a tension shared between two ends is not found. A connector between a body
+  and something fixed is the exception, because it holds the body rather than
+  joining it to another unknown.
+- *Bodies in contact.* #c("touching:") places them side by side; the pair of
+  contact forces between them is not derived, and no action–reaction pair is
+  drawn.
+- *A body on a curved support.* An #c("arc") accelerates a body towards the
+  centre of the curve, and no declaration states the speed that would take.
+- *Rods, supports, pivots, applied torques, and pendulums.* They draw and
+  compose. Balancing a moment needs the line of action of a contact force, which
+  a force balance does not fix, so #c("rod") and #c("torque") do not enter a
+  model — and a body one of them reaches is declined.
+- *#c("disk") and #c("ring").* Drawing-only bodies; rolling dynamics is not
+  derived.
+- *A situation that is genuinely indeterminate*, such as a body both resting on a
+  surface and tied to a fixed point: three unknowns against two force equations.
+  This one is not a gap in the package. No solver can answer it without an added
+  assumption.
 - #c("components(of:)") for anything but the weight.
-- Solving electrical circuits. The electricity namespace draws nested
-  two-terminal series/parallel resistor and capacitor networks but does not
-  calculate resistance, capacitance, charge, current, voltage, impedance,
-  transients, or power.
-- Electrical topologies that #c("series") and #c("parallel") cannot compose,
-  such as a bridge network. This release also omits electrical components other
-  than ideal voltage sources, resistors, and capacitors.
+
+Circuits are derived in full for every network the grammar can express; see
+@circuit-quantities for what is outside that, which is transient behaviour,
+components beyond ideal sources, resistors and capacitors, and charge.
 
 // ═════════════════════════════════════════════════════════════════════════════
 = License

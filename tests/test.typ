@@ -1755,3 +1755,507 @@ The declaration changes in one place; every view follows.
     ),
   ), labels: "value", style: (scale: 0.8))
 })
+
+#pagebreak()
+
+== A wall is one contact like any other
+
+A block held against a wall by a horizontal push is one body with one contact,
+so the same equations balance it. With $m = 4$ kg and $g = 9.81$, the weight
+$m g = 39.24$ N runs along the wall and the push sets the normal force.
+
+#let wall-push(push) = situation(
+  wall("W", side: left, height: 4),
+  block("A", mass: 4, on: "W", at: 45%, mu: (s: 0.50, k: 0.40)),
+  force(on: "A", magnitude: push, angle: 180deg),
+)
+
+#section(
+  "120 N holds it: N = 120, available 0.50 x 120 = 60 >= 39.24, so it stays",
+  {
+    scene(wall-push(120), forces: true)
+    v(0.4em)
+    solve(wall-push(120), find: "normal")
+    [ — regime: #solve(wall-push(120), find: "regime"), ]
+    solve(wall-push(120), find: "friction")
+  },
+)
+
+#section(
+  "60 N does not: available 30 < 39.24, so a = (39.24 - 0.40 x 60) / 4 = 3.81",
+  {
+    fbd(wall-push(60), "A")
+    v(0.4em)
+    solve(wall-push(60))
+  },
+)
+
+#pagebreak()
+
+== A ceiling carries the outward normal downwards
+
+A block pressed against a ceiling has its weight pulling it off the surface, so
+the normal force is what is left of the push: with $m = 2$ kg and a 50 N upward
+press, $N = 50 - 19.62 = 30.38$ N. A 10 N sideways push then needs 10 N of
+friction against the $0.25 times 30.38 = 7.60$ N available, so it slides at
+$a = (10 - 0.20 times 30.38) / 2 = 1.962$ m/s².
+
+#let ceiling-situation = situation(
+  ceiling("C", length: 6, height: 3.4),
+  block("B", mass: 2, on: "C", at: 50%, mu: (s: 0.25, k: 0.20)),
+  force(on: "B", magnitude: 50, angle: 90deg),
+  force(on: "B", magnitude: 10, angle: 0deg),
+)
+
+#section("Scene with the forces in place", scene(ceiling-situation, forces: true))
+
+#section("Free-body diagram and the answer", {
+  fbd(ceiling-situation, "B")
+  v(0.4em)
+  solve(ceiling-situation, find: "normal")
+  [ — ]
+  solve(ceiling-situation)
+})
+
+#pagebreak()
+
+== A hanging body carries its own weight
+
+The hanging-body model puts the whole weight in the rope: $T = m g = 3 times
+9.81 = 29.43$ N. Drawing the rope does not change that, because a connector
+between a body and something fixed is what holds the body up rather than a joint
+to a second unknown.
+
+#let hanging-situation = situation(
+  ceiling("roof", length: 6, height: 3.4),
+  block("H", mass: 3, hanging: (on: "roof", at: 50%), drop: 1.6),
+  rope("cord", from: (on: "roof", at: 50%), to: "H.top"),
+)
+
+#section("Scene", scene(hanging-situation))
+
+#section("The tension is filled in on the free-body diagram", {
+  fbd(hanging-situation, "H")
+  v(0.4em)
+  solve(hanging-situation)
+})
+
+#section("Its force table uses world axes, because it rests on nothing", {
+  force-table(hanging-situation, "H")
+})
+
+#pagebreak()
+
+== A left-facing ramp resolves loads in its own frame
+
+The slope climbs to the left, so a push to the right acts *down* the incline and
+adds to gravity instead of opposing it. With $m = 4$ kg, $theta = 30 degree$ and
+a frictionless contact, a 20 N push to the right gives
+$N = 33.98 - 20 sin 30 degree = 23.98$ N and
+$a = (19.62 + 20 cos 30 degree) / 4 = 9.235$ m/s².
+
+#let left-ramp-situation = situation(
+  ramp("slope", angle: 30deg, length: 6.5, facing: left),
+  block("A", mass: 4, on: "slope", at: 50%, mu: 0),
+  force(on: "A", magnitude: 20, angle: 0deg),
+)
+
+#section("Scene with the forces in place", scene(left-ramp-situation, forces: true))
+
+#section("The answer", {
+  solve(left-ramp-situation, find: "normal")
+  [ — ]
+  solve(left-ramp-situation)
+})
+
+#pagebreak()
+
+== Which model a situation matches
+
+`model-of` names the model before anything is solved, and the figures never wait
+on the answer.
+
+#let arc-situation = situation(
+  arc("loop", radius: 2.2, start-angle: 200deg, end-angle: 340deg, side: "inside"),
+  block("P", mass: 2, on: "loop", at: 50%),
+)
+#let stacked-situation = situation(
+  ground("floor", length: 7),
+  block("L", mass: 3, on: "floor", at: 35%),
+  block("R", mass: 2, touching: "L"),
+)
+
+#section("Four situations and the model each falls under", table(
+  columns: 2,
+  align: (left, left),
+  stroke: none,
+  table.hline(),
+  table.header([Situation], [Model]),
+  table.hline(),
+  [block on an incline], repr(model-of(incline-situation, "A")),
+  [block pressed on a wall], repr(model-of(wall-push(120), "A")),
+  [block hanging from a roof], repr(model-of(hanging-situation, "H")),
+  [block on a curved support], repr(model-of(arc-situation, "P")),
+  [two blocks in contact], repr(model-of(stacked-situation, "L")),
+  table.hline(),
+))
+
+#section(
+  "A body no model matches still draws, and still enumerates its forces",
+  {
+    scene(arc-situation)
+    v(0.4em)
+    fbd(arc-situation, "P")
+    v(0.4em)
+    force-table(arc-situation, "P")
+  },
+)
+
+#section("So do two blocks in contact", {
+  scene(stacked-situation)
+  v(0.4em)
+  force-table(stacked-situation, "L")
+})
+
+#pagebreak()
+
+== A DC circuit reduces to what it settles at
+
+12 V across $R_1 = 4 Omega$ in series with $R_2 = 6 Omega$ parallel to a
+capacitor. The capacitor carries no steady current, so the group is 6 Ω,
+$R_"eq" = 10 Omega$, $I = 1.2$ A, and the capacitor sits at the group's
+7.2 V.
+
+#let reduced-circuit = e.dc-circuit(
+  e.voltage-source("V", voltage: 12),
+  e.series(
+    e.resistor("R1", resistance: 4),
+    e.parallel(
+      e.resistor("R2", resistance: 6),
+      e.capacitor("C1", capacitance: 220, unit: "µF"),
+    ),
+  ),
+)
+
+#section("Diagram", e.diagram(reduced-circuit, style: (scale: 0.8)))
+
+#section("What it settles at", {
+  e.solve(reduced-circuit)
+  [ — ]
+  e.solve(reduced-circuit, find: "current")
+  [ — ]
+  e.solve(reduced-circuit, "C1")
+})
+
+#section("Every component", e.component-table(reduced-circuit))
+
+#section("A network with no numbers reduces to a closed form", {
+  let symbolic-circuit = e.dc-circuit(
+    e.voltage-source("V"),
+    e.parallel(e.resistor("R1"), e.resistor("R2")),
+  )
+  e.solve(symbolic-circuit)
+  [ — ]
+  e.solve(symbolic-circuit, find: "current")
+})
+
+#pagebreak()
+
+== Capacitors block a steady current
+
+Two capacitors in series across 12 V share one charge, so
+$C_"eq" = 1.2$ F, $Q = 14.4$ C, and the voltages divide as $Q slash C$:
+7.2 V and 4.8 V.
+
+#let capacitive-circuit = e.dc-circuit(
+  e.voltage-source("V", voltage: 12),
+  e.series(e.capacitor("C1", capacitance: 2), e.capacitor("C2", capacitance: 3)),
+)
+
+#section("Diagram", e.diagram(capacitive-circuit, style: (scale: 0.8)))
+
+#section("The capacitive divider", {
+  e.solve(capacitive-circuit)
+  [ — ]
+  e.solve(capacitive-circuit, "C1")
+  [ — ]
+  e.solve(capacitive-circuit, "C2")
+})
+
+#section("A capacitor in series with a resistor stops the current entirely", {
+  let blocked-circuit = e.dc-circuit(
+    e.voltage-source("V", voltage: 12),
+    e.series(e.resistor("R1", resistance: 4), e.capacitor("C1", capacitance: 2)),
+  )
+  e.diagram(blocked-circuit, style: (scale: 0.8))
+  v(0.4em)
+  e.component-table(blocked-circuit)
+})
+
+#pagebreak()
+
+#import "../src/expression.typ"
+
+== Symbolic closed forms, checked against the textbook
+
+Every quantity below is declared as a symbol, so there is nothing to fold and
+the solver must state its answer as algebra. The middle column is what
+`typed-physics` derives; the right column is the formula as a mechanics text
+writes it. They should read the same.
+
+Two things to know while reading these. A symbolic situation cannot decide its
+own friction regime, because comparing $mu_s N$ against the friction required
+needs numbers, so each case states the regime with `assume:` and the result
+records that it was given rather than checked. And the friction and acceleration
+of a rough contact are written in terms of $N$, whose own closed form is the
+line above them.
+
+#let closed-form(term) = expression.math-of(term)
+
+#let derivation(caption, rows) = section(caption, table(
+  columns: (auto, 1fr, 1fr),
+  align: (left, left, left),
+  stroke: none,
+  inset: (x: 6pt, y: 5pt),
+  table.hline(),
+  table.header([Quantity], [Derived], [Textbook]),
+  table.hline(),
+  ..rows.flatten(),
+  table.hline(),
+))
+
+=== A body on an incline
+
+#let free-incline = situation(
+  ramp("incline", angle: 30deg, length: 6),
+  block("A", mass: $m$, on: "incline", at: 50%),
+  gravity: $g$,
+)
+#let rough-incline = situation(
+  ramp("incline", angle: 30deg, length: 6),
+  block("A", mass: $m$, on: "incline", at: 50%, mu: (s: $mu_s$, k: $mu_k$)),
+  gravity: $g$,
+)
+
+#let free-answer = results(free-incline, assume: "sliding")
+#derivation("Frictionless", (
+  ($N$, closed-form(free-answer.normal.expression), $m g cos theta$),
+  ($a$, closed-form(free-answer.acceleration.expression), $g sin theta$),
+))
+
+#let sliding-answer = results(rough-incline, assume: "sliding")
+#derivation("Rough, sliding", (
+  ($N$, closed-form(sliding-answer.normal.expression), $m g cos theta$),
+  ($f_k$, closed-form(sliding-answer.friction.expression), $mu_k N$),
+  (
+    $a$,
+    closed-form(sliding-answer.acceleration.expression),
+    $g sin theta - mu_k g cos theta$,
+  ),
+))
+
+#let static-answer = results(rough-incline, assume: "static")
+#derivation("Rough, held at rest", (
+  ($N$, closed-form(static-answer.normal.expression), $m g cos theta$),
+  (
+    [required],
+    closed-form(static-answer.required.expression),
+    $m g sin theta$,
+  ),
+  (
+    [available],
+    closed-form(static-answer.available.expression),
+    $mu_s N$,
+  ),
+  ($f_s$, closed-form(static-answer.friction.expression), $m g sin theta$),
+))
+
+#pagebreak()
+
+=== A body pushed along level ground
+
+Level ground is the incline equations with an exact zero for $theta$, so the
+sines and cosines fold away on their own rather than through a second set of
+formulas.
+
+#let horizontal-push = situation(
+  ground("floor", length: 7),
+  block("A", mass: $m$, on: "floor", at: 40%, mu: (s: $mu_s$, k: $mu_k$)),
+  force(on: "A", magnitude: $F$, angle: 0deg),
+  gravity: $g$,
+)
+#let horizontal-answer = results(horizontal-push, assume: "sliding")
+#derivation("Pushed horizontally", (
+  ($N$, closed-form(horizontal-answer.normal.expression), $m g$),
+  ([required], closed-form(horizontal-answer.required.expression), $F$),
+  (
+    $a$,
+    closed-form(horizontal-answer.acceleration.expression),
+    $(F - mu_k m g) / m$,
+  ),
+))
+
+The same push tilted up by $phi$ lifts some of the weight off the surface, which
+lowers the normal force and the friction with it.
+
+#let angled-push = situation(
+  ground("floor", length: 7),
+  block("A", mass: $m$, on: "floor", at: 40%, mu: (s: $mu_s$, k: $mu_k$)),
+  force(on: "A", magnitude: $F$, angle: 30deg),
+  gravity: $g$,
+)
+#let angled-answer = results(angled-push, assume: "sliding")
+#derivation("Pushed at an angle above the horizontal", (
+  ($N$, closed-form(angled-answer.normal.expression), $m g - F sin phi$),
+  ([required], closed-form(angled-answer.required.expression), $F cos phi$),
+  (
+    $a$,
+    closed-form(angled-answer.acceleration.expression),
+    $(F cos phi - mu_k (m g - F sin phi)) / m$,
+  ),
+))
+
+#pagebreak()
+
+=== The contacts a wall and a ceiling make
+
+These are the two surfaces the single-contact model reaches through the placed
+axes rather than through a declared angle, so their closed forms are the check
+that the frame is right.
+
+A block held against a wall by a horizontal push: the push alone sets the normal
+force, and the whole weight has to be carried by friction.
+
+#let wall-push = situation(
+  wall("side", side: left, height: 4),
+  block("A", mass: $m$, on: "side", at: 45%, mu: (s: $mu_s$, k: $mu_k$)),
+  force(on: "A", magnitude: $F$, angle: 180deg),
+  gravity: $g$,
+)
+#let wall-answer = results(wall-push, assume: "sliding")
+#derivation("Held against a wall", (
+  ($N$, closed-form(wall-answer.normal.expression), $F$),
+  ([required], closed-form(wall-answer.required.expression), $m g$),
+  ([available], closed-form(wall-answer.available.expression), $mu_s N$),
+  (
+    $a$,
+    closed-form(wall-answer.acceleration.expression),
+    $(m g - mu_k F) / m$,
+  ),
+))
+
+A block pressed against a ceiling: the weight pulls it off the surface, so only
+what is left of the press appears as the normal force. A second push $P$ slides
+it along.
+
+#let ceiling-press = situation(
+  ceiling("roof", length: 6, height: 3),
+  block("A", mass: $m$, on: "roof", at: 50%, mu: (s: $mu_s$, k: $mu_k$)),
+  force(on: "A", magnitude: $F$, angle: 90deg),
+  force(on: "A", magnitude: $P$, angle: 0deg),
+  gravity: $g$,
+)
+#let ceiling-answer = results(ceiling-press, assume: "sliding")
+#derivation("Pressed against a ceiling", (
+  ($N$, closed-form(ceiling-answer.normal.expression), $F - m g$),
+  ([required], closed-form(ceiling-answer.required.expression), $P$),
+  (
+    $a$,
+    closed-form(ceiling-answer.acceleration.expression),
+    $(P - mu_k (F - m g)) / m$,
+  ),
+))
+
+=== A force up the slope, and a body on a rope
+
+#let up-the-slope = situation(
+  ramp("incline", angle: 30deg, length: 6),
+  block("A", mass: $m$, on: "incline", at: 50%, mu: (s: $mu_s$, k: $mu_k$)),
+  force(on: "A", magnitude: $F$, angle: 30deg),
+  gravity: $g$,
+)
+#let up-answer = results(up-the-slope, assume: "static")
+#let hanging-symbolic = situation(
+  ceiling("roof", length: 6, height: 3),
+  block("H", mass: $m$, hanging: (on: "roof", at: 50%)),
+  gravity: $g$,
+)
+#derivation("Pulled up a rough incline, and hanging at rest", (
+  ($N$, closed-form(up-answer.normal.expression), $m g cos theta$),
+  (
+    [required],
+    closed-form(up-answer.required.expression),
+    $F - m g sin theta$,
+  ),
+  (
+    $T$,
+    closed-form(results(hanging-symbolic).tension.expression),
+    $m g$,
+  ),
+))
+
+#pagebreak()
+
+=== Circuits with no numbers
+
+A network declared without values reduces to a closed form the same way. The
+current a component carries is written in terms of $I$, and a capacitor's
+voltage in terms of the charge $Q$ its chain holds, each of which is stated on
+its own line.
+
+#let series-network = e.dc-circuit(
+  e.voltage-source("V"),
+  e.series(e.resistor("R1"), e.resistor("R2")),
+)
+#let series-answer = e.results(series-network)
+#derivation("Two resistors in series", (
+  ($R_"eq"$, closed-form(series-answer.resistance.expression), $#"R1" + #"R2"$),
+  ($I$, closed-form(series-answer.current.expression), $V / (#"R1" + #"R2")$),
+  (
+    $V_#"R1"$,
+    closed-form(series-answer.components.R1.voltage),
+    $I #"R1"$,
+  ),
+))
+
+#let parallel-network = e.dc-circuit(
+  e.voltage-source("V"),
+  e.parallel(e.resistor("R1"), e.resistor("R2")),
+)
+#let parallel-answer = e.results(parallel-network)
+#derivation("Two resistors in parallel", (
+  (
+    $R_"eq"$,
+    closed-form(parallel-answer.resistance.expression),
+    $(#"R1" #"R2") / (#"R1" + #"R2")$,
+  ),
+  ($I$, closed-form(parallel-answer.current.expression), $V / R_"eq"$),
+  (
+    $I_#"R1"$,
+    closed-form(parallel-answer.components.R1.current),
+    $V / #"R1"$,
+  ),
+))
+
+#let capacitor-network = e.dc-circuit(
+  e.voltage-source("V"),
+  e.series(e.capacitor("C1"), e.capacitor("C2")),
+)
+#let capacitor-answer = e.results(capacitor-network)
+#derivation("Two capacitors in series, which share one charge", (
+  (
+    $C_"eq"$,
+    closed-form(capacitor-answer.capacitance.expression),
+    $(#"C1" #"C2") / (#"C1" + #"C2")$,
+  ),
+  (
+    $V_#"C1"$,
+    closed-form(capacitor-answer.components.C1.voltage),
+    $Q / #"C1"$,
+  ),
+  (
+    $V_#"C2"$,
+    closed-form(capacitor-answer.components.C2.voltage),
+    $Q / #"C2"$,
+  ),
+))
