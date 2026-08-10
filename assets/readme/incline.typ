@@ -4,8 +4,22 @@
 #set text(font: "New Computer Modern", size: 11pt)
 
 #let s = situation(
-  ramp("incline", angle: 30deg, length: 7),
-  block("A", mass: 4, on: "incline", at: 55%, mu: (s: 0.40, k: 0.30)),
+  ramp("incline", angle: 32deg, length: 8),
+  block("A", mass: 25, on: "incline", at: 45%, size: 1.25, symbol: $m$),
+  force(on: "A", magnitude: $F$, angle: 32deg),
 )
 
-#scene(s, labels: "both", angles: "both", frictions: true, lengths: true)
+#scene(
+  s,
+  labels: "both",
+  angles: "both",
+  dimensions: (
+    dimension(
+      from: "incline.apex",
+      to: "incline.base",
+      orientation: "vertical",
+      side: "right",
+      label: $h$,
+    ),
+  ),
+)
