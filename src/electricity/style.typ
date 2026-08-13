@@ -1,7 +1,7 @@
 // Electrical diagram defaults and component-level overrides.
 
-#import "../validation-core.typ" as core-validation
-#import "../validation-styles.typ" as style-validation
+#import "../shared/validation-core.typ" as core-validation
+#import "../shared/validation-styles.typ" as style-validation
 
 #let theme = (
   wire-stroke: 0.9pt + rgb("#343A40"),

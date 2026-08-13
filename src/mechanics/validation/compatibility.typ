@@ -1,7 +1,7 @@
 // Compatibility rules that depend on more than one declaration.
 
-#import "validation-core.typ" as core
-#import "validation-references.typ" as references
+#import "../../shared/validation-core.typ" as core
+#import "references.typ" as references
 
 #let _value = core.value-representation
 #let attachment-element-name = references.attachment-element-name

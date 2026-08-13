@@ -1,14 +1,14 @@
 // Assembly of validated declarations into one placed scene.
 
-#import "vector.typ"
-#import "expression.typ"
-#import "validation.typ"
-#import "placement-quantities.typ" as quantities
-#import "placement-anchors.typ" as anchors
-#import "placement-surfaces.typ" as surfaces
-#import "placement-bodies.typ" as bodies
-#import "placement-structures.typ" as structures
-#import "placement-connectors.typ" as connectors
+#import "../../shared/vector.typ"
+#import "../../shared/expression.typ"
+#import "../validation/lib.typ" as validation
+#import "quantities.typ" as quantities
+#import "anchors.typ" as anchors
+#import "surfaces.typ" as surfaces
+#import "bodies.typ" as bodies
+#import "structures.typ" as structures
+#import "connectors.typ" as connectors
 
 #let gravity-quantity = quantities.gravity-quantity
 #let resolve-attachment-point = anchors.resolve-attachment-point

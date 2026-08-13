@@ -1,6 +1,6 @@
 // Visual annotations belong to a view rather than to the physical situation.
 
-#import "validation.typ"
+#import "validation/lib.typ" as validation
 
 #let dimension(
   from: none,

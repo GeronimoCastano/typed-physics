@@ -65,6 +65,13 @@
   )
 } else if selected-case == "spring-coils" {
   spring(from: "A", to: "B", coils: 2.5)
+} else if selected-case == "inferred-spring-outside-wall" {
+  situation(
+    ground("floor", length: 6),
+    wall("wall", side: left, height: 0.4),
+    block("A", on: "floor", at: 50%, size: 1),
+    spring(from: (on: "wall"), to: "A.left"),
+  )
 } else if selected-case == "load-wrong-target" {
   situation(ground("floor"), force(on: "floor", magnitude: 10))
 } else if selected-case == "ignored-body-load-point" {

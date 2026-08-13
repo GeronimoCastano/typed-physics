@@ -241,6 +241,35 @@
 #repr(model-of(unmodelled-situation, "slider"))
 #repr(solved-models().map(model => model.id))
 
+// Omitting a spring's wall ratio infers the opposite body anchor's height,
+// while an explicit ratio remains exact.
+#let wall-spring-attachments = situation(
+  ground("spring-floor", length: 6),
+  wall("spring-wall", side: left, height: 2.4),
+  block("spring-block", on: "spring-floor", at: 50%, size: 1.2),
+  spring(
+    "inferred-spring",
+    from: (on: "spring-wall"),
+    to: "spring-block.left",
+  ),
+  spring(
+    "explicit-spring",
+    from: (on: "spring-wall", at: 22%),
+    to: "spring-block.left",
+  ),
+  spring(
+    "reverse-inferred-spring",
+    from: "spring-block.left",
+    to: (on: "spring-wall"),
+  ),
+)
+#let inferred-spring = wall-spring-attachments.connectors.at(0)
+#let explicit-spring = wall-spring-attachments.connectors.at(1)
+#let reverse-inferred-spring = wall-spring-attachments.connectors.at(2)
+#assert(inferred-spring.start.at(1) == inferred-spring.end.at(1))
+#assert(explicit-spring.start.at(1) != explicit-spring.end.at(1))
+#assert(reverse-inferred-spring.start.at(1) == reverse-inferred-spring.end.at(1))
+
 // Symbolic and numeric circuits, every derived quantity, and the component table.
 #let mixed-circuit = electricity.dc-circuit(
   electricity.voltage-source("supply", voltage: 12),

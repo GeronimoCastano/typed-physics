@@ -1,9 +1,9 @@
 // Local validation for each declaration kind.
 
-#import "validation-core.typ" as core
-#import "validation-references.typ" as references
-#import "validation-schema.typ" as schema
-#import "validation-styles.typ" as styles
+#import "../../shared/validation-core.typ" as core
+#import "references.typ" as references
+#import "schema.typ" as schema
+#import "../../shared/validation-styles.typ" as styles
 
 #let _value = core.value-representation
 #let validate-name = core.validate-name

@@ -4,7 +4,7 @@
 // write. Nothing here composes a sentence that a document in another language
 // would have to fight.
 
-#import "expression.typ"
+#import "../shared/expression.typ"
 #import "forces.typ" as force-enumeration
 #import "models.typ"
 

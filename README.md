@@ -81,7 +81,7 @@ And it decides the friction regime rather than assuming it:
   wall("wall", side: left, height: 2.4),
   block("A", on: "floor", at: 22%, size: 1.2),
   block("B", on: "floor", at: 62%, size: 1.5),
-  spring("s", from: (on: "wall", at: 22%), to: "A.left", coils: 7),
+  spring("s", from: (on: "wall"), to: "A.left", coils: 7),
   velocity(on: "A", angle: 0deg, label: $v_0$),
 )
 
@@ -90,6 +90,10 @@ And it decides the friction regime rather than assuming it:
     orientation: "horizontal", side: "above", label: $d$),
 ))
 ```
+
+Because the wall attachment omits `at:`, the spring infers the height of the
+body anchor and stays horizontal. Add an explicit wall ratio such as
+`(on: "wall", at: 22%)` when the spring should use that exact point instead.
 
 ![Spring, blocks, and a labelled gap](assets/readme/spring.png)
 

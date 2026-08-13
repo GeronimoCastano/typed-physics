@@ -1,6 +1,6 @@
 // Symbolic quantities introduced while declarations become placed geometry.
 
-#import "expression.typ"
+#import "../../shared/expression.typ"
 
 // A number substitutes to itself and still prints as g; content the author
 // wrote keeps gravity symbolic through every equation that uses it.

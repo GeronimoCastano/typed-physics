@@ -1,9 +1,9 @@
 // Placement of bodies on surfaces, beside bodies, or from attachments.
 
-#import "vector.typ"
-#import "expression.typ"
-#import "placement-anchors.typ" as anchors
-#import "placement-quantities.typ" as quantities
+#import "../../shared/vector.typ"
+#import "../../shared/expression.typ"
+#import "anchors.typ" as anchors
+#import "quantities.typ" as quantities
 
 #let resolve-attachment-point = anchors.resolve-attachment-point
 #let mass-symbol = quantities.mass-symbol

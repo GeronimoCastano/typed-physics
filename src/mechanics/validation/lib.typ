@@ -5,11 +5,11 @@
 // primitive values, styles, declarations, references, compatibility, and
 // complete-situation orchestration.
 
-#import "validation-core.typ" as core
-#import "validation-styles.typ" as styles
-#import "validation-references.typ" as references
-#import "validation-schema.typ" as schema
-#import "validation-situation.typ" as situation
+#import "../../shared/validation-core.typ" as core
+#import "../../shared/validation-styles.typ" as styles
+#import "references.typ" as references
+#import "schema.typ" as schema
+#import "situation.typ" as situation
 
 #let fail = core.fail
 #let validate-name = core.validate-name

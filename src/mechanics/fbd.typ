@@ -7,10 +7,10 @@
 
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: anchor, group, line
-#import "vector.typ"
-#import "expression.typ"
+#import "../shared/vector.typ"
+#import "../shared/expression.typ"
 #import "forces.typ"
-#import "render.typ"
+#import "render/lib.typ" as render
 #import "style.typ": resolve-body-style, resolve-force-style
 
 #let _body-centered-at-origin(body) = body + (

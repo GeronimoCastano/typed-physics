@@ -2,11 +2,11 @@
 
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: anchor, circle, group, line
-#import "vector.typ"
-#import "render-geometry.typ" as geometry
-#import "render-surfaces.typ" as surfaces
-#import "render-bodies.typ" as bodies
-#import "style.typ": resolve-body-style, resolve-connector-style
+#import "../../shared/vector.typ"
+#import "geometry.typ" as geometry
+#import "surfaces.typ" as surfaces
+#import "bodies.typ" as bodies
+#import "../style.typ": resolve-body-style, resolve-connector-style
 
 #let rod-corners = geometry.rod-corners
 #let render-label = geometry.render-label

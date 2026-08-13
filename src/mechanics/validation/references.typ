@@ -1,7 +1,7 @@
 // Attachment syntax, anchor vocabulary, and placement dependencies.
 
-#import "validation-core.typ" as core
-#import "validation-schema.typ" as schema
+#import "../../shared/validation-core.typ" as core
+#import "schema.typ" as schema
 
 #let _value = core.value-representation
 #let fail = core.fail

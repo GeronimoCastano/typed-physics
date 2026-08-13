@@ -1,6 +1,6 @@
 // Automatic placement for two-terminal electrical networks.
 
-#import "../vector.typ"
+#import "../shared/vector.typ"
 
 #let _empty-layout(width, top: 0.7, bottom: 0.7) = (
   width: width,

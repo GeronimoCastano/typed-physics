@@ -2,8 +2,8 @@
 
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: anchor, arc, circle, group, line
-#import "vector.typ"
-#import "style.typ": resolve-connector-style
+#import "../../shared/vector.typ"
+#import "../style.typ": resolve-connector-style
 
 #let render-pulley(placed-pulley, diagram-style) = {
   let wheel-style = resolve-connector-style(

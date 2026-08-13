@@ -9,23 +9,23 @@
 // underneath.
 
 #import "@preview/cetz:0.5.2"
-#import "placement.typ"
-#import "render.typ" as scene-rendering
-#import "fbd.typ" as free-body-rendering
-#import "solver.typ"
-#import "models.typ"
-#import "report.typ"
-#import "forces.typ" as force-enumeration
-#import "annotations.typ": dimension
-#import "validation.typ"
+#import "mechanics/placement/lib.typ" as placement
+#import "mechanics/render/lib.typ" as scene-rendering
+#import "mechanics/fbd.typ" as free-body-rendering
+#import "mechanics/solver.typ"
+#import "mechanics/models.typ"
+#import "mechanics/report.typ"
+#import "mechanics/forces.typ" as force-enumeration
+#import "mechanics/annotations.typ": dimension
+#import "mechanics/validation/lib.typ" as validation
 #import "electricity/lib.typ" as electricity
 
-#import "elements.typ": (
+#import "mechanics/elements.typ": (
   angular-velocity, arc, ball, block, ceiling, disk, force, ground, pendulum,
   pivot, point-mass, pulley, ramp, ring, rod, rope, spring, support, torque,
   velocity, wall,
 )
-#import "style.typ": (
+#import "mechanics/style.typ": (
   block-style, connector-style, force-style, resolve-body-style, resolve-style,
   scaled-diagram, surface-style, theme,
 )

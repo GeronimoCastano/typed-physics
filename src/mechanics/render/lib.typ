@@ -4,10 +4,10 @@
 // loads and motion, dimensions, and final scene assembly. FBD and public view
 // assembly retain this stable internal boundary.
 
-#import "render-geometry.typ" as geometry
-#import "render-bodies.typ" as bodies
-#import "render-loads.typ" as loads
-#import "render-scene.typ" as scene
+#import "geometry.typ" as geometry
+#import "bodies.typ" as bodies
+#import "loads.typ" as loads
+#import "scene.typ" as scene
 
 #let render-label = geometry.render-label
 #let render-force-arrow = geometry.render-force-arrow

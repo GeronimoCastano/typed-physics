@@ -4,7 +4,7 @@
 // write. A quantity a circuit does not have is named and declined rather than
 // answered with a number from somewhere else.
 
-#import "../expression.typ"
+#import "../shared/expression.typ"
 
 // What a circuit is asked for when the author does not say. A network that
 // passes a current is read for the resistance it presents; one that does not is

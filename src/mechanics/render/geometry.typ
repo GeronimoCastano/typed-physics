@@ -2,7 +2,7 @@
 
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: arc, content, line
-#import "vector.typ"
+#import "../../shared/vector.typ"
 
 #let render-label(
   position,

@@ -2,10 +2,10 @@
 
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: arc
-#import "vector.typ"
-#import "forces.typ" as force-enumeration
-#import "render-geometry.typ" as geometry
-#import "style.typ": resolve-body-style, resolve-force-style, resolve-velocity-style
+#import "../../shared/vector.typ"
+#import "../forces.typ" as force-enumeration
+#import "geometry.typ" as geometry
+#import "../style.typ": resolve-body-style, resolve-force-style, resolve-velocity-style
 
 #let body-visible-boundary-distance = geometry.body-visible-boundary-distance
 #let rod-boundary-distance-from = geometry.rod-boundary-distance-from

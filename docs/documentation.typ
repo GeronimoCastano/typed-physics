@@ -1373,12 +1373,18 @@ of its ends, and @models says why that is declined.
     wall(side: left, height: 2),
     block("A", mass: 3, on: "ground", at: 60%),
     spring(to: "A.left", coils: 7,
-      from: (on: "wall", at: 25%)),
+      from: (on: "wall")),
     force(on : "A", magnitude : 10, angle : 180deg)
   )
   #scene(s)
   ```, side: false)
 ]
+
+When one end of a spring is a body anchor, omit #c("at:") from a wall
+attachment to infer that anchor's height and keep the spring horizontal. An
+explicit ratio remains exact and may intentionally produce an angled spring:
+#c("(on: \"wall\", at: 25%)"). If the inferred height falls outside the wall,
+extend or reposition the wall, or supply an explicit ratio.
 
 == Applied forces
 

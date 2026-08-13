@@ -1994,7 +1994,7 @@ $C_"eq" = 1.2$ F, $Q = 14.4$ C, and the voltages divide as $Q slash C$:
 
 #pagebreak()
 
-#import "../src/expression.typ"
+#import "../src/shared/expression.typ"
 
 == Symbolic closed forms, checked against the textbook
 
@@ -2259,3 +2259,29 @@ its own line.
     $Q / #"C2"$,
   ),
 ))
+
+#pagebreak()
+
+== Inferred spring attachment height
+
+#section("A wall spring without at aligns to its body anchor", {
+  let s = situation(
+    ground("floor", length: 10),
+    wall("wall", side: left, height: 2.4),
+    block("A", on: "floor", at: 22%, size: 1.2),
+    block("B", on: "floor", at: 62%, size: 1.5),
+    spring("s", from: (on: "wall"), to: "A.left", coils: 7),
+    velocity(on: "A", angle: 0deg, label: $v_0$),
+  )
+  let placed-spring = s.connectors.first()
+  assert(placed-spring.start.at(1) == placed-spring.end.at(1))
+  scene(s, dimensions: (
+    dimension(
+      from: "A.right",
+      to: "B.left",
+      orientation: "horizontal",
+      side: "above",
+      label: $d$,
+    ),
+  ))
+})

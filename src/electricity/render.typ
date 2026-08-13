@@ -2,8 +2,8 @@
 
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: anchor, circle, content, group, line
-#import "../expression.typ"
-#import "../vector.typ"
+#import "../shared/expression.typ"
+#import "../shared/vector.typ"
 #import "style.typ"
 
 #let _displayed-number(value) = if type(value) in (int, float) {

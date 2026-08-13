@@ -1,16 +1,16 @@
 // Full-scene annotation settings and assembly from focused renderers.
 
-#import "vector.typ"
-#import "expression.typ"
-#import "forces.typ" as force-enumeration
-#import "render-geometry.typ" as geometry
-#import "render-surfaces.typ" as surfaces
-#import "render-bodies.typ" as bodies
-#import "render-structures.typ" as structures
-#import "render-connectors.typ" as connectors
-#import "render-loads.typ" as loads
-#import "render-dimensions.typ" as dimensions
-#import "style.typ": resolve-surface-style
+#import "../../shared/vector.typ"
+#import "../../shared/expression.typ"
+#import "../forces.typ" as force-enumeration
+#import "geometry.typ" as geometry
+#import "surfaces.typ" as surfaces
+#import "bodies.typ" as bodies
+#import "structures.typ" as structures
+#import "connectors.typ" as connectors
+#import "loads.typ" as loads
+#import "dimensions.typ" as dimensions
+#import "../style.typ": resolve-surface-style
 
 #let render-label = geometry.render-label
 #let render-angle-marker = geometry.render-angle-marker

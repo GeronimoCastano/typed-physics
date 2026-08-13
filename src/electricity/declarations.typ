@@ -1,7 +1,7 @@
 // Electrical declarations describe connectivity and physical quantities without
 // choosing coordinates. Layout and rendering consume this two-terminal tree.
 
-#import "../validation-core.typ" as validation
+#import "../shared/validation-core.typ" as validation
 #import "style.typ" as styles
 
 #let _network-validation-kind = "typed-physics-electrical-network"

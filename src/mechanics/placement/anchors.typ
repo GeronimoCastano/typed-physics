@@ -1,6 +1,6 @@
 // General attachment and named-anchor resolution for placed elements.
 
-#import "vector.typ"
+#import "../../shared/vector.typ"
 
 #let split-anchor-reference(reference) = {
   let reference-parts = reference.split(".")

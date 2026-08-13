@@ -2,9 +2,9 @@
 
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: content, line
-#import "vector.typ"
-#import "placement.typ"
-#import "render-geometry.typ" as geometry
+#import "../../shared/vector.typ"
+#import "../placement/lib.typ" as placement
+#import "geometry.typ" as geometry
 
 #let body-corners = geometry.body-corners
 #let rod-corners = geometry.rod-corners

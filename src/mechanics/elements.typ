@@ -11,7 +11,7 @@
   validate-block-style, validate-connector-style, validate-force-style,
   validate-surface-style,
 )
-#import "validation.typ"
+#import "validation/lib.typ" as validation
 
 #let _resolve-element-name(arguments, default-name) = {
   let positional-names = arguments.pos()

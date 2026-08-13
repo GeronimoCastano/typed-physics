@@ -1,10 +1,10 @@
 // Complete situation validation, ordered before geometry placement.
 
-#import "validation-core.typ" as core
-#import "validation-schema.typ" as schema
-#import "validation-elements.typ" as elements
-#import "validation-references.typ" as references
-#import "validation-compatibility.typ" as compatibility
+#import "../../shared/validation-core.typ" as core
+#import "schema.typ" as schema
+#import "elements.typ" as elements
+#import "references.typ" as references
+#import "compatibility.typ" as compatibility
 
 #let _value = core.value-representation
 #let validate-physical-scalar = core.validate-physical-scalar

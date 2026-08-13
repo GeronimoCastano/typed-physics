@@ -15,11 +15,11 @@
 // cannot answer and the one authors get wrong, so it is answered first and
 // reported before any acceleration is.
 
-#import "expression.typ"
+#import "../shared/expression.typ"
 #import "forces.typ"
 #import "models.typ"
-#import "vector.typ"
-#import "validation.typ"
+#import "../shared/vector.typ"
+#import "validation/lib.typ" as validation
 
 #let body-can-be-balanced = models.body-can-be-balanced
 

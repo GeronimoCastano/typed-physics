@@ -2,10 +2,10 @@
 
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: anchor, arc, group, line
-#import "vector.typ"
-#import "expression.typ"
-#import "render-geometry.typ" as geometry
-#import "style.typ": resolve-surface-style
+#import "../../shared/vector.typ"
+#import "../../shared/expression.typ"
+#import "geometry.typ" as geometry
+#import "../style.typ": resolve-surface-style
 
 #let render-label = geometry.render-label
 

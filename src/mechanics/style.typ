@@ -9,7 +9,7 @@
 // and nothing else. Element styles use short names — `fill`, `stroke` — because
 // they are already scoped to the thing they describe.
 
-#import "validation.typ"
+#import "validation/lib.typ" as validation
 
 // ── Diagram defaults ─────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 // Public electricity namespace: semantic DC declarations and drawing views.
 
 #import "@preview/cetz:0.5.2"
-#import "../validation-core.typ" as validation
+#import "../shared/validation-core.typ" as validation
 #import "declarations.typ": (
   capacitor, dc-circuit, parallel, resistor, series, validate-circuit,
   voltage-source,

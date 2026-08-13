@@ -18,7 +18,7 @@
 // declared alike, and a current is only named in amperes when the resistances
 // are in ohms and the source in volts.
 
-#import "../expression.typ"
+#import "../shared/expression.typ"
 
 // A declared value as an expression. A component with no value still has a
 // name, and carrying it as a symbol is what lets a circuit be reduced in closed

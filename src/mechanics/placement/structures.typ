@@ -1,8 +1,8 @@
 // Placement of rods, supports, pivots, pendulums, and torques.
 
-#import "vector.typ"
-#import "placement-anchors.typ" as anchors
-#import "placement-bodies.typ" as bodies
+#import "../../shared/vector.typ"
+#import "anchors.typ" as anchors
+#import "bodies.typ" as bodies
 
 #let resolve-attachment-point = anchors.resolve-attachment-point
 #let _split-anchor-reference = anchors.split-anchor-reference

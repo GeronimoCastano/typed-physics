@@ -8,7 +8,7 @@
   wall("wall", side: left, height: 2.4),
   block("A", on: "floor", at: 22%, size: 1.2),
   block("B", on: "floor", at: 62%, size: 1.5),
-  spring("s", from: (on: "wall", at: 22%), to: "A.left", coils: 7),
+  spring("s", from: (on: "wall"), to: "A.left", coils: 7),
   velocity(on: "A", angle: 0deg, label: $v_0$),
 )
 

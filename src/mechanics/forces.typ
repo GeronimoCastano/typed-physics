@@ -7,8 +7,8 @@
 // diagram is the enumeration rendered, which is why it cannot disagree with
 // the scene it came from.
 
-#import "vector.typ"
-#import "expression.typ"
+#import "../shared/vector.typ"
+#import "../shared/expression.typ"
 
 // The component of a load along and out of the surface its body rests on.
 //

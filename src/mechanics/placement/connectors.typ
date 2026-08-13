@@ -1,9 +1,59 @@
 // Placement of ropes and springs between resolved attachments.
 
-#import "vector.typ"
-#import "placement-anchors.typ" as anchors
+#import "../../shared/vector.typ"
+#import "anchors.typ" as anchors
 
 #let resolve-attachment-point = anchors.resolve-attachment-point
+
+#let _should-infer-wall-height-from-body(
+  attachment,
+  opposite-attachment,
+  placed-surfaces,
+  placed-bodies,
+) = {
+  if type(attachment) != dictionary or "at" in attachment { return false }
+  let surface-name = anchors.attachment-element-name(attachment)
+  let opposite-element-name = anchors.attachment-element-name(
+    opposite-attachment,
+  )
+  (
+    surface-name in placed-surfaces
+      and placed-surfaces.at(surface-name).kind == "wall"
+      and opposite-element-name in placed-bodies
+  )
+}
+
+#let _wall-position-at-body-anchor-height(
+  wall-attachment,
+  body-anchor-position,
+  placed-surfaces,
+  declared-by,
+) = {
+  let wall-name = anchors.attachment-element-name(wall-attachment)
+  let placed-wall = placed-surfaces.at(wall-name)
+  let inferred-height = body-anchor-position.at(1)
+  let lowest-wall-position = calc.min(
+    placed-wall.start.at(1),
+    placed-wall.end.at(1),
+  )
+  let highest-wall-position = calc.max(
+    placed-wall.start.at(1),
+    placed-wall.end.at(1),
+  )
+  assert(
+    inferred-height >= lowest-wall-position - 0.000001
+      and inferred-height <= highest-wall-position + 0.000001,
+    message: (
+      "typed-physics: "
+        + declared-by
+        + " cannot infer its attachment on wall \""
+        + wall-name
+        + "\" because the opposite body anchor falls outside the wall; "
+        + "add `at:` to choose an explicit wall position, or extend or reposition the wall"
+    ),
+  )
+  (placed-wall.start.at(0), inferred-height)
+}
 
 #let _tangent-point-on-pulley(placed-pulley, external-position, wrap-side) = {
   let centre-to-point = vector.subtract(external-position, placed-pulley.center)
@@ -43,6 +93,35 @@
   )
   let start-position = resolve-end(connector-declaration.from)
   let end-position = resolve-end(connector-declaration.to)
+  if connector-declaration.kind == "spring" {
+    let should-infer-start-height-from-body = _should-infer-wall-height-from-body(
+      connector-declaration.from,
+      connector-declaration.to,
+      placed-surfaces,
+      placed-bodies,
+    )
+    let should-infer-end-height-from-body = _should-infer-wall-height-from-body(
+      connector-declaration.to,
+      connector-declaration.from,
+      placed-surfaces,
+      placed-bodies,
+    )
+    if should-infer-start-height-from-body {
+      start-position = _wall-position-at-body-anchor-height(
+        connector-declaration.from,
+        end-position,
+        placed-surfaces,
+        declared-by,
+      )
+    } else if should-infer-end-height-from-body {
+      end-position = _wall-position-at-body-anchor-height(
+        connector-declaration.to,
+        start-position,
+        placed-surfaces,
+        declared-by,
+      )
+    }
+  }
   let connector-span = vector.subtract(end-position, start-position)
   assert(
     vector.magnitude(connector-span) > 0.000001,
