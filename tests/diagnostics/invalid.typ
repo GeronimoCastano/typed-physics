@@ -98,6 +98,9 @@
 } else if selected-case == "missing-label-data" {
   let s = situation(ground(), block("A", on: "ground"))
   scene(s, labels: "mass")
+} else if selected-case == "unknown-scene-argument" {
+  let s = situation(ground("floor"))
+  scene(s, typo: true)
 } else if selected-case == "unknown-style-key" {
   situation(ground(), style: (force-colors: (mystery: red)))
 } else if selected-case == "invalid-style-value" {

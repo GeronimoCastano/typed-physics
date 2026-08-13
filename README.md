@@ -5,7 +5,7 @@ A Typst drawing library that also understands physics.
 ![Block on an incline](assets/readme/incline.png)
 
 ```typst
-#import "@preview/typed-physics:0.1.0": *
+#import "@preview/typed-physics:0.1.1": *
 
 #let s = situation(
   ramp("incline", angle: 32deg, length: 8),
@@ -144,7 +144,7 @@ branch of a `parallel` travels between the split and join nodes, which is how a
 network takes a shape.
 
 ```typst
-#import "@preview/typed-physics:0.1.0": electricity as e
+#import "@preview/typed-physics:0.1.1": electricity as e
 
 #let circuit = e.dc-circuit(
   e.voltage-source("V", voltage: 18),

@@ -256,33 +256,55 @@
   }
 }
 
-#let scene(s, ..arguments) = {
+#let scene(
+  s,
+  ..unexpected-arguments,
+  labels: "name",
+  angles: "value",
+  loads: true,
+  frictions: false,
+  lengths: false,
+  dimensions: (),
+  forces: none,
+  components: none,
+  style: (:),
+) = {
   _validate-situation(s, "scene()")
   assert(
-    arguments.pos().len() == 0,
+    unexpected-arguments.pos().len() == 0,
     message: "typed-physics: scene() takes no positional arguments after the situation",
   )
-  let allowed-arguments = (
-    "labels", "angles", "loads", "frictions", "lengths", "dimensions",
-    "forces", "components", "style",
+  assert(
+    unexpected-arguments.named().len() == 0,
+    message: (
+      "typed-physics: scene() has unknown argument"
+        + if unexpected-arguments.named().len() == 1 { " " } else { "s " }
+        + unexpected-arguments.named().keys().map(
+          argument-name => "`" + argument-name + ":`",
+        ).join(", ")
+        + "; accepted arguments are labels, angles, loads, frictions, lengths, dimensions, forces, components, style"
+    ),
   )
-  for argument-name in arguments.named().keys() {
-    assert(
-      argument-name in allowed-arguments,
-      message: (
-        "typed-physics: scene() has unknown argument `"
-          + argument-name
-          + ":`; accepted arguments are "
-          + allowed-arguments.join(", ")
-      ),
-    )
-  }
   let diagram-style = _view-style(
     s,
-    arguments.named().at("style", default: (:)),
+    style,
     public-function: "scene()",
   )
-  _canvas(diagram-style, draw(s, ..arguments))
+  _canvas(
+    diagram-style,
+    draw(
+      s,
+      labels: labels,
+      angles: angles,
+      loads: loads,
+      frictions: frictions,
+      lengths: lengths,
+      dimensions: dimensions,
+      forces: forces,
+      components: components,
+      style: style,
+    ),
+  )
 }
 
 #let fbd(s, name, axes: auto, outline: true, solve: true, style: (:)) = {
