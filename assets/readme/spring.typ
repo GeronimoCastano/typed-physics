@@ -14,7 +14,7 @@
 
 #scene(
   s,
-  dimensions: (
+  annotations: (
     dimension(
       from: "A.right",
       to: "B.left",

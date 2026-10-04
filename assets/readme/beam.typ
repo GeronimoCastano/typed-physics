@@ -14,7 +14,7 @@
 
 #scene(
   s,
-  dimensions: (
+  annotations: (
     dimension(
       from: "beam.start",
       to: (on: "beam", at: 30%),

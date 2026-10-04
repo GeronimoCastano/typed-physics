@@ -5,7 +5,7 @@ A Typst drawing library that also understands physics.
 ![Block on an incline](assets/readme/incline.png)
 
 ```typst
-#import "@preview/typed-physics:0.1.2": *
+#import "@preview/typed-physics:0.2.0": *
 
 #let s = situation(
   ramp("incline", angle: 32deg, length: 8),
@@ -13,7 +13,7 @@ A Typst drawing library that also understands physics.
   force(on: "A", magnitude: $F$, angle: 32deg),
 )
 
-#scene(s, labels: "both", angles: "both", dimensions: (
+#scene(s, labels: "both", angles: "both", annotations: (
   dimension(from: "incline.apex", to: "incline.base",
     orientation: "vertical", side: "right", label: $h$),
 ))
@@ -85,7 +85,7 @@ And it decides the friction regime rather than assuming it:
   velocity(on: "A", angle: 0deg, label: $v_0$),
 )
 
-#scene(s, dimensions: (
+#scene(s, annotations: (
   dimension(from: "A.right", to: "B.left",
     orientation: "horizontal", side: "above", label: $d$),
 ))
@@ -96,6 +96,36 @@ body anchor and stays horizontal. Add an explicit wall ratio such as
 `(on: "wall", at: 22%)` when the spring should use that exact point instead.
 
 ![Spring, blocks, and a labelled gap](assets/readme/spring.png)
+
+### Annotating a figure
+
+```typst
+#let s = situation(
+  ground("floor", length: 9),
+  ramp("incline", angle: 32deg, length: 4.6, from: "floor.end"),
+  block("A", mass: 2, on: "floor", at: 26%),
+  pulley("P", at: (on: "floor", at: 58%, offset: (0, 2.4))),
+  rope("cord", from: "A.top", to: "P.left"),
+)
+
+#scene(s, angles: "none", annotations: (
+  angle-mark(from: "floor", to: "incline", label: $theta$, radius: 1.1),
+  axis(at: (on: "floor", at: 8%, offset: (0, 2.4)), length: 0.7),
+  dimension(from: "A.right", to: "incline.foot",
+    orientation: "horizontal", label: $d$),
+  brace(from: "incline.foot", to: "incline.apex", label: $ell$, offset: 0.3),
+  callout(at: "P.center", label: [frictionless], direction: "north"),
+  arrow(from: "A.left", to: (on: "A.left", offset: (-1.4, 0)),
+    label: $v_0$, label-position: "center"),
+))
+```
+
+Annotations belong to the figure rather than to the situation, and they attach
+relationally: an angle mark names the two surfaces whose corner it measures, an
+axis names the element whose direction it takes, and a callout names the point
+it points at. None of them takes a coordinate.
+
+![Six annotations on one scene](assets/readme/annotations.png)
 
 ### A simply supported beam
 
@@ -109,7 +139,7 @@ body anchor and stays horizontal. Add an explicit wall ratio such as
   torque(on: "beam", at: 80%, direction: "clockwise", radius: 0.5, label: $M_0$),
 )
 
-#scene(s, dimensions: (
+#scene(s, annotations: (
   dimension(from: "beam.start", to: (on: "beam", at: 30%),
     side: "below", offset: 1.15, label: $a$),
   dimension(from: (on: "beam", at: 30%), to: (on: "beam", at: 62%),
@@ -149,7 +179,7 @@ branch of a `parallel` travels between the split and join nodes, which is how a
 network takes a shape.
 
 ```typst
-#import "@preview/typed-physics:0.1.2": electricity as e
+#import "@preview/typed-physics:0.2.0": electricity as e
 
 #let circuit = e.dc-circuit(
   e.voltage-source("V", voltage: 18),
@@ -192,6 +222,24 @@ capacitors instead, dividing as *Q/C*.
 
 ## Vocabulary
 
+Wherever one element pins to another, the same spellings work:
+
+```typst
+"ceiling"                          // that element's default anchor
+"incline.apex"                     // a named anchor of it
+(on: "ceiling", at: 40%)           // that far along the element itself
+(on: "A.top", at: 25%)             // that far along one of its anchors
+(on: "B.left", offset: (0, 0.3))   // an anchor, displaced from where it sits
+```
+
+`at:` runs along an anchor that spans a line or an arc — a surface, a body's
+side or face, a pulley rim, a rod, a pendulum string, a rope or spring.
+`offset:` is an `(x, y)` displacement in world units or absolute lengths such
+as `3pt`. A body carries `center`, `contact`, the sides and corners of the box
+that encloses it (`top`, `bottom`, `left`, `right`, `top-left`, and the other
+three), and its own faces in the frame it was placed in (`uphill`, `downhill`,
+`outward`).
+
 Surfaces and bodies:
 
 ```typst
@@ -231,7 +279,7 @@ Views, each taking the situation first:
 
 ```typst
 #scene(s, labels: "name", angles: "value", loads: true, frictions: false,
-  lengths: false, dimensions: (), forces: none, components: none, style: (:))
+  lengths: false, annotations: (), forces: none, components: none, style: (:))
 #fbd(s, name, axes: auto, outline: true, solve: true, style: (:))
 #components(s, name, of: "weight", style: (:))
 #draw(s)                      // CeTZ elements, to compose with your own
@@ -244,8 +292,16 @@ Views, each taking the situation first:
 #solved-models()
 ```
 
-`dimension(from:, to:, orientation:, side:, offset:, label:, ...)` builds the
-annotations `scene(dimensions:)` takes.
+Annotations, which `scene(annotations:)` and `draw(annotations:)` take:
+
+```text
+#dimension(from:, to:, orientation: "aligned", side: auto, offset: 0.6, label: auto, ...)
+#angle-mark(from:, to:, at: auto, radius: auto, label: auto, right-angle: auto, ...)
+#axis(at:, along: auto, angle: 0deg, length: 1.2, x-label: auto, y-label: auto, ...)
+#callout(at:, label:, direction: "north-east", distance: 1.2, dot: true, frame: true, ...)
+#brace(from:, to:, label: none, side: "above", offset: 0.25, amplitude: 0.3, ...)
+#arrow(from:, to:, via: (), label: none, arrows: "end", ...)
+```
 
 Electrical names live under the `electricity` namespace:
 

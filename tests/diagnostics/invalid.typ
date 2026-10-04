@@ -82,10 +82,10 @@
   )
 } else if selected-case == "dimension-anchor" {
   let s = situation(ground("floor"))
-  scene(s, dimensions: dimension(from: "floor.nope", to: "floor.end"))
+  scene(s, annotations: dimension(from: "floor.nope", to: "floor.end"))
 } else if selected-case == "dimension-schema" {
   let s = situation(ground())
-  scene(s, dimensions: (kind: "dimension", from: "ground.start"))
+  scene(s, annotations: (kind: "dimension", from: "ground.start"))
 } else if selected-case == "missing-view-body" {
   let s = situation(ground(), block("A", on: "ground"))
   fbd(s, "B")
@@ -418,6 +418,57 @@
       electricity.resistor("R2", resistance: 6),
     ),
   ), find: "power")
+} else if selected-case == "annotations-renamed" {
+  let s = situation(ground("floor"))
+  scene(s, dimensions: dimension(from: "floor.start", to: "floor.end"))
+} else if selected-case == "annotation-unknown-kind" {
+  let s = situation(ground("floor"))
+  scene(s, annotations: (kind: "sketch", from: "floor.start"))
+} else if selected-case == "annotation-not-a-dictionary" {
+  let s = situation(ground("floor"))
+  scene(s, annotations: "a note")
+} else if selected-case == "callout-without-label" {
+  let s = situation(ground("floor"))
+  scene(s, annotations: callout(at: "floor.start"))
+} else if selected-case == "angle-mark-without-corner" {
+  let s = situation(ground("floor"))
+  scene(s, annotations: angle-mark(from: 0deg, to: 45deg))
+} else if selected-case == "angle-mark-parallel" {
+  let s = situation(ground("floor", length: 5), ground("shelf", length: 3, from: "floor.end"))
+  scene(s, annotations: angle-mark(from: "floor", to: "shelf"))
+} else if selected-case == "arrow-coincident-points" {
+  let s = situation(ground("floor"), block("A", on: "floor"))
+  scene(s, annotations: arrow(from: "A.center", to: "A.center"))
+} else if selected-case == "brace-coincident-points" {
+  let s = situation(ground("floor"), block("A", on: "floor"))
+  scene(s, annotations: brace(from: "A.center", to: "A.center"))
+} else if selected-case == "axis-unknown-direction" {
+  let s = situation(ground("floor"))
+  scene(s, annotations: axis(at: "floor.start", along: "missing"))
+} else if selected-case == "brace-side" {
+  brace(from: "a", to: "b", side: "outward")
+} else if selected-case == "offset-relative-length" {
+  situation(ground("floor"), pulley("P", at: (on: "floor", offset: (0, 1em))))
+} else if selected-case == "offset-wrong-type" {
+  situation(ground("floor"), pulley("P", at: (on: "floor", offset: (0, "up"))))
+} else if selected-case == "offset-not-a-pair" {
+  situation(ground("floor"), pulley("P", at: (on: "floor", offset: 0.5)))
+} else if selected-case == "ratio-along-point-anchor" {
+  situation(
+    ground("floor"),
+    block("A", on: "floor"),
+    pulley("P", at: (on: "floor", at: 40%)),
+    rope("cord", from: (on: "A.center", at: 30%), to: "P.left"),
+  )
+} else if selected-case == "ratio-along-whole-body" {
+  situation(
+    ground("floor"),
+    block("A", on: "floor"),
+    pulley("P", at: (on: "floor", at: 40%)),
+    rope("cord", from: (on: "A", at: 30%), to: "P.left"),
+  )
+} else if selected-case == "renamed-style-key" {
+  situation(ground(), style: (dimension-color: red))
 } else {
   panic("diagnostic harness: unknown case " + repr(selected-case))
 }

@@ -88,9 +88,9 @@
   label-text: (size: 9pt),
   angle-text: (size: 9pt),
   force-text: (size: 9pt),
-  dimension-color: rgb("#5C6670"),
-  dimension-stroke: 0.6pt,
-  dimension-text: (size: 8.5pt),
+  annotation-color: rgb("#5C6670"),
+  annotation-stroke: 0.6pt,
+  annotation-text: (size: 8.5pt),
 )
 
 #let parts(..items) = std.block(above: 0.8em, {
@@ -134,7 +134,7 @@
     crate-on-incline,
     labels: "both",
     angles: "both",
-    dimensions: dimension(
+    annotations: dimension(
       from: "incline.apex",
       to: "incline.base",
       orientation: "vertical",
@@ -227,7 +227,7 @@
   scene(
     spring-launch,
     labels: "name",
-    dimensions: dimension(
+    annotations: dimension(
       from: "A.right",
       to: "B.left",
       orientation: "horizontal",
@@ -259,7 +259,7 @@
   draw(
     loaded-beam,
     labels: "name",
-    dimensions: (
+    annotations: (
       dimension(
         from: "beam.start",
         to: (on: "beam", at: 30%),
@@ -356,7 +356,7 @@
   scene(
     vertical-loop,
     labels: "name",
-    dimensions: dimension(
+    annotations: dimension(
       from: (3.6, 2),
       to: (5.6, 2),
       orientation: "horizontal",

@@ -38,11 +38,13 @@
   // bodies resting on it.
   length-label-offset: 0.8,
 
-  // Drafting-style dimensions added by a scene view.
-  dimension-color: rgb("#868E96"),
-  dimension-stroke: 0.7pt,
+  // Annotations added by a scene view: dimensions, angle marks, axes,
+  // callouts, braces, and arrows share one layer, so they share its colour,
+  // line weight, and text size.
+  annotation-color: rgb("#868E96"),
+  annotation-stroke: 0.7pt,
+  annotation-text: (size: 9pt),
   dimension-extension-stroke: (thickness: 0.7pt, dash: "dashed"),
-  dimension-text: (size: 9pt),
 
   // Force arrows. Lengths are in world units: the largest force on a body is
   // drawn at `force-length` and the rest in proportion, down to `force-floor`,
@@ -129,7 +131,9 @@
       )
     }
   }
-  for text-key in ("label-text", "force-text", "angle-text", "dimension-text") {
+  for text-key in (
+    "label-text", "force-text", "angle-text", "annotation-text",
+  ) {
     if text-key in overrides {
       assert(
         type(overrides.at(text-key)) == dictionary,
@@ -139,7 +143,7 @@
   }
   for paint-key in (
     "surface-fill", "body-fill", "point-mass-fill", "pulley-fill",
-    "dimension-color", "velocity-color",
+    "annotation-color", "velocity-color",
   ) {
     if paint-key in overrides {
       validation.validate-paint(
@@ -152,7 +156,7 @@
   }
   for stroke-key in (
     "surface-stroke", "hatch-stroke", "body-stroke", "angle-stroke",
-    "construction-stroke", "dimension-stroke",
+    "construction-stroke", "annotation-stroke",
     "dimension-extension-stroke", "force-stroke", "rope-stroke",
     "spring-stroke", "pulley-stroke", "velocity-stroke",
   ) {

@@ -5,7 +5,6 @@
 #import "bodies.typ" as bodies
 
 #let resolve-attachment-point = anchors.resolve-attachment-point
-#let _split-anchor-reference = anchors.split-anchor-reference
 #let _declared-mass = bodies.declared-mass
 
 #let _support-contact-on-attached-rod(
@@ -16,11 +15,9 @@
   if support-declaration.support-kind == "fixed" {
     return attachment-position
   }
-  let attached-element-name = if type(support-declaration.at) == dictionary {
-    support-declaration.at.at("on")
-  } else {
-    _split-anchor-reference(support-declaration.at).element
-  }
+  let attached-element-name = anchors.attachment-element-name(
+    support-declaration.at,
+  )
   if attached-element-name not in placed-structures {
     return attachment-position
   }

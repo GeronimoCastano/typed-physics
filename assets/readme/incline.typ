@@ -13,7 +13,7 @@
   s,
   labels: "both",
   angles: "both",
-  dimensions: (
+  annotations: (
     dimension(
       from: "incline.apex",
       to: "incline.base",

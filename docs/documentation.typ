@@ -8,7 +8,7 @@
 #import "@preview/cetz:0.5.2"
 #import "../src/lib.typ" as physics
 
-#let version = "0.1.2"
+#let version = "0.2.0"
 #let accent = rgb("#1971C2")
 #let accent-soft = rgb("#E7F0FA")
 
@@ -83,6 +83,11 @@
   block: physics.block,
   force: physics.force,
   dimension: physics.dimension,
+  angle-mark: physics.angle-mark,
+  axis: physics.axis,
+  callout: physics.callout,
+  brace: physics.brace,
+  arrow: physics.arrow,
   scene: physics.scene,
   fbd: physics.fbd,
   components: physics.components,
@@ -160,6 +165,13 @@
   ..rows,
 )
 
+#let anchor-table(..rows) = table(
+  columns: (auto, 1.4fr, 1fr), inset: 7pt,
+  align: (x, y) => if y == 0 { center + horizon } else { left + horizon },
+  fill: (_, y) => if y == 0 { accent-soft }, stroke: 0.5pt + luma(210),
+  ..rows,
+)
+
 // ── Cover ────────────────────────────────────────────────────────────────────
 
 #set page(paper: "a4", margin: (x: 2.2cm, top: 2.6cm, bottom: 2.4cm), header: none, footer: none)
@@ -219,13 +231,13 @@ Import the package from the Typst preview namespace. A wildcard import gives you
 every public symbol:
 
 ```typ
-#import "@preview/typed-physics:0.1.2": *
+#import "@preview/typed-physics:0.2.0": *
 ```
 
 Or import only what you need:
 
 ```typ
-#import "@preview/typed-physics:0.1.2": situation, ramp, block, scene, fbd, solve
+#import "@preview/typed-physics:0.2.0": situation, ramp, block, scene, fbd, solve
 ```
 
 #warn[
@@ -274,7 +286,8 @@ force it stands for.
   [#c("pendulum")], [A suspended bob, string, construction line, and angle.],
   [#c("rope"), #c("spring"), #c("pulley")], [Connectors.],
   [#c("force"), #c("velocity"), #c("angular-velocity")], [What acts on a body, and how it is already moving or rotating.],
-  [#c("dimension")], [A scene-only distance annotation between anchors or points.],
+  [#c("dimension"), #c("angle-mark"), #c("axis")], [Scene-only annotations that state a measured distance, angle, or frame.],
+  [#c("callout"), #c("brace"), #c("arrow")], [Scene-only annotations that name a point, group a span, or trace a path.],
   [#c("scene(s)")], [The figure.],
   [#c("fbd(s, name)")], [A free-body diagram.],
   [#c("components(s, name)")], [The weight resolved into the surface's axes.],
@@ -510,6 +523,82 @@ reference explain what the arguments mean and show live examples.
   color: auto,
   text: (:),
 )
+
+#angle-mark(
+  from: none,             // an element, (on:, reversed:), or an angle
+  to: none,
+  at: auto,               // the corner; auto crosses the two lines
+  radius: auto,
+  label: auto,            // auto states the swept angle
+  label-offset: (0, 0),
+  label-rotation: 0deg,
+  right-angle: auto,      // true or false forces the marker
+  stroke: auto,
+  color: auto,
+  text: (:),
+)
+
+#axis(
+  at: none,               // where the origin sits
+  along: auto,            // an element whose direction the x axis takes
+  angle: 0deg,            // turned further by this much
+  length: 1.2,
+  x-label: auto,          // content, or none
+  y-label: auto,
+  quadrants: "positive",  // or "both" for a full cross
+  arrow-tip: "stealth",
+  arrow-scale: 0.5,
+  label-offset: 0.24,
+  stroke: auto,
+  color: auto,
+  text: (:),
+)
+
+#callout(
+  at: none,               // the point it names
+  label: none,            // the content it says
+  direction: "north-east", // a compass name or an angle
+  distance: 1.2,
+  dot: true,
+  frame: true,
+  fill: white,
+  arrow-tip: none,        // an arrowhead at the named point
+  arrow-scale: 0.5,
+  stroke: auto,
+  color: auto,
+  text: (:),
+)
+
+#brace(
+  from: none,
+  to: none,
+  label: none,
+  side: "above",          // above/left or below/right of from -> to
+  offset: 0.25,
+  amplitude: 0.3,
+  pointiness: 60%,
+  label-offset: 0.18,
+  label-rotation: 0deg,
+  stroke: auto,
+  color: auto,
+  text: (:),
+)
+
+#arrow(
+  from: none,
+  to: none,
+  via: (),                // waypoints, which make it a path
+  label: none,
+  label-position: "end",  // "start" or "center"
+  label-offset: 0.24,
+  label-rotation: 0deg,
+  arrows: "end",          // "both", "start", or "none"
+  arrow-tip: "stealth",
+  arrow-scale: 0.5,
+  stroke: auto,
+  color: auto,
+  text: (:),
+)
 ```
 
 == Figures
@@ -522,7 +611,7 @@ reference explain what the arguments mean and show live examples.
   loads: true,         // true or false
   frictions: false,    // true or false
   lengths: false,      // true or false
-  dimensions: (),      // dimension(...) or an array of them
+  annotations: (),     // one annotation, or an array of them
   forces: none,        // a body name, names, true, or none
   components: none,    // a body name, names, true, or none
   style: (:),
@@ -535,7 +624,7 @@ reference explain what the arguments mean and show live examples.
   loads: true,         // true or false
   frictions: false,    // true or false
   lengths: false,      // true or false
-  dimensions: (),      // dimension(...) or an array of them
+  annotations: (),     // one annotation, or an array of them
   forces: none,        // a body name, names, true, or none
   components: none,    // a body name, names, true, or none
   style: (:),
@@ -582,7 +671,7 @@ Electrical names live under the #c("electricity") namespace so a circuit's
 collide with mechanics declarations.
 
 ```typ
-#import "@preview/typed-physics:0.1.2": electricity as e
+#import "@preview/typed-physics:0.2.0": electricity as e
 
 #e.dc-circuit(source, network, style: (:))
 #e.voltage-source(name, voltage: none, unit: auto, label: auto, style: (:))
@@ -1169,24 +1258,48 @@ A wall with no `from:` still stands at the edge of everything placed before it.
 
 == Attachment points <attachments>
 
-Anywhere one element pins to another, the same three spellings work:
+Anywhere one element pins to another, the same spellings work:
 
 #reference-table(
   [*Written as*], [*Means*],
   [#c("\"ceiling\"")], [That element's default anchor: the midpoint of a surface, the centre of a body or pulley.],
   [#c("\"incline.apex\"")], [A named anchor of that element.],
-  [#c("(on: \"ceiling\", at: 40%)")], [A point that far along a surface.],
+  [#c("(on: \"ceiling\", at: 40%)")], [A point that far along the element itself.],
+  [#c("(on: \"A.top\", at: 25%)")], [A point that far along one of its anchors.],
+  [#c("(on: \"B.left\", offset: (0, 0.3))")], [An anchor, displaced from where it sits.],
 )
 
-#reference-table(
-  [*Element*], [*Anchors*],
-  [surfaces], [#c("start"), #c("end"), #c("surface")],
-  [ramps also], [#c("foot"), #c("apex"), #c("base")],
-  [bodies], [#c("center"), #c("contact"), #c("top"), #c("bottom"), #c("left"), #c("right"), #c("uphill"), #c("downhill"), #c("outward")],
-  [pulleys], [#c("center"), #c("top"), #c("bottom"), #c("left"), #c("right")],
+#c("at:") runs along an anchor that spans a line or an arc; naming no anchor
+runs it along the element itself, which surfaces, rods, pendulum strings, and
+connectors have. A ratio along an anchor that is a single point is refused, and
+the message lists the anchors that do span.
+
+#c("offset:") is an #c("(x, y)") displacement on the page's own axes, applied
+after the anchor resolves. Its components are numbers in diagram world units,
+or absolute lengths such as #c("3pt") or #c("2mm").
+
+#anchor-table(
+  [*Element*], [*Anchors*], [*A ratio runs along*],
+  [surfaces], [#c("start"), #c("end"), #c("surface")], [#c("surface")],
+  [ramps also], [#c("foot"), #c("apex"), #c("base")], [],
+  [bodies], [#c("center"), #c("contact"), #c("top"), #c("bottom"), #c("left"), #c("right"), #c("top-left"), #c("top-right"), #c("bottom-left"), #c("bottom-right"), #c("uphill"), #c("downhill"), #c("outward")], [#c("top"), #c("bottom"), #c("left"), #c("right"), #c("uphill"), #c("downhill"), #c("outward")],
+  [pulleys], [#c("center"), #c("top"), #c("bottom"), #c("left"), #c("right"), #c("rim")], [#c("rim")],
+  [rods], [#c("start"), #c("end"), #c("center"), #c("center-of-mass"), #c("rod")], [#c("rod")],
+  [pendulums], [#c("pivot"), #c("bob"), #c("center"), #c("string")], [#c("string")],
+  [ropes and springs], [#c("start"), #c("end"), #c("center"), #c("line")], [#c("line")],
 )
 
-An element may only attach to something declared before it.
+A body's #c("top"), #c("bottom"), #c("left"), and #c("right") are the sides of
+the upright box that encloses it, so they mean what a reader sees however the
+body is tilted, and a round body reports the box around it. #c("uphill"),
+#c("downhill"), and #c("outward") are its own faces in the frame it was placed
+in, which is what a rope tied to the upper side of a block on a slope means. A
+ratio along a face runs from its end nearest the supporting surface, and along
+#c("outward") from its downhill end.
+
+An element may only attach to something declared before it. Ropes and springs
+are placed after everything they span, so their anchors are available to
+annotations rather than to other declarations.
 
 == Bodies
 
@@ -1669,7 +1782,7 @@ $theta_"lower"$ and $theta_"upper"$ unless you say otherwise.
 
 ```typ
 #scene(s, labels: "name", angles: "value", loads: true, frictions: false,
-       lengths: false, dimensions: (), forces: none, components: none,
+       lengths: false, annotations: (), forces: none, components: none,
        style: (:))
 ```
 
@@ -1680,7 +1793,7 @@ $theta_"lower"$ and $theta_"upper"$ unless you say otherwise.
   [#c("loads:")], [Whether to draw the applied forces.],
   [#c("frictions:")], [Whether to write each contact's coefficients beside the body that makes it.],
   [#c("lengths:")], [Whether to write each surface's length beside it, as $ell = 7$.],
-  [#c("dimensions:")], [One #c("dimension(...)") annotation or an array of them.],
+  [#c("annotations:")], [One annotation or an array of them: #c("dimension()"), #c("angle-mark()"), #c("axis()"), #c("callout()"), #c("brace()"), or #c("arrow()").],
   [#c("forces:")], [Draw the forces on a body where it sits: a name, several names, or #c("true") for every body.],
   [#c("components:")], [Resolve the weight on a body where it sits: a name, several names, or #c("true") for every body.],
   [#c("style:")], [Style overrides for this view. See @styling.],
@@ -1723,12 +1836,34 @@ $theta_"lower"$ and $theta_"upper"$ unless you say otherwise.
   ```)
 ]
 
-=== Configurable dimensions
+=== Annotations
 
-#c("dimension()") draws a drafting-style measurement in one #c("scene()") or
-#c("draw()") call; it is not part of the physical #c("situation()"). Its
-#c("from:") and #c("to:") accept the package's ordinary anchors, connector
-anchors such as #c("\"spring.start\""), or raw #c("(x, y)") points.
+An annotation is written where a figure is drawn rather than inside
+#c("situation()"), because what a reader should be told about a figure belongs
+to that figure and not to the physics. #c("scene(annotations:)") and
+#c("draw(annotations:)") take one annotation or an array of them, and every
+kind attaches through the anchors of @attachments, connector anchors such as
+#c("\"spring.start\""), or raw #c("(x, y)") points.
+
+#reference-table(
+  [*Annotation*], [*States*],
+  [#c("dimension()")], [A drafting-style distance between two points.],
+  [#c("angle-mark()")], [The angle swept from one direction to another.],
+  [#c("axis()")], [The coordinate frame a figure is read in.],
+  [#c("callout()")], [A note attached by a leader line to one point.],
+  [#c("brace()")], [A curly brace grouping a span, with a label at its tip.],
+  [#c("arrow()")], [A vector, or a path through waypoints.],
+)
+
+Every annotation takes #c("color:"), #c("stroke:"), and #c("text:") to override
+the figure's annotation defaults for that one annotation. Annotations are drawn
+last, on top of the scene.
+
+==== Dimensions
+
+#c("dimension()") measures a distance. Its #c("from:") and #c("to:") accept the
+package's ordinary anchors, connector anchors such as #c("\"spring.start\""),
+or raw #c("(x, y)") points.
 
 #c("orientation: \"aligned\"") measures along the segment joining the anchors.
 #c("\"horizontal\"") measures their x-separation, and #c("\"vertical\"")
@@ -1784,7 +1919,7 @@ beside an uninterrupted line.
   )
   #scene(
     s,
-    dimensions: dimension(
+    annotations: dimension(
       from: "coil.start",
       to: "coil.end",
       offset: 1.2,
@@ -1807,7 +1942,7 @@ beside an uninterrupted line.
   )
   #scene(
     s,
-    dimensions: (dimension(
+    annotations: (dimension(
       from: "incline.foot",
       to: "incline.apex",
       offset: 2,
@@ -1835,6 +1970,102 @@ beside an uninterrupted line.
     )
     ),
   )
+  ```, side: false)
+]
+
+==== Angle marks
+
+#c("angle-mark()") sweeps counterclockwise from its #c("from:") direction to
+its #c("to:") direction, so which of the two angles between a pair of lines is
+marked follows from the order they are written in. A direction is an element
+whose own direction is meant, that element reversed as
+#c("(on: \"floor\", reversed: true)"), or an angle in the world frame.
+#c("at:") is the corner; left at #c("auto") it is where the two lines cross.
+#c("label: auto") states the swept angle, and a right angle is drawn as a
+square unless #c("right-angle:") says otherwise.
+
+#demo[
+  #example(```typ
+  #let s = situation(
+    ground("floor", length: 6),
+    ramp("incline", angle: 35deg, length: 3,
+      from: (on: "floor", at: 40%)),
+  )
+  #scene(s, angles: "none", annotations: (
+    angle-mark(from: "floor", to: "incline",
+      radius: 0.7),
+    angle-mark(
+      from: "incline",
+      to: (on: "floor", reversed: true),
+      radius: 1.1,
+      label: $180 degree - theta$,
+    ),
+  ))
+  ```, side: false)
+]
+
+==== Axes
+
+#c("axis()") draws the frame a figure is read in. #c("along:") turns it into
+the direction of an element, which is how a block on a slope gets the axes its
+solution is written in, and #c("angle:") turns it further. #c("quadrants:
+\"both\"") draws a full cross rather than two arms.
+
+#demo[
+  #example(```typ
+  #let s = situation(
+    ramp("slope", angle: 25deg, length: 5.5),
+    block("B", mass: 3, on: "slope", at: 55%),
+  )
+  #scene(s, annotations: axis(
+    at: "B.center",
+    along: "slope",
+    length: 1.3,
+    x-label: $x'$,
+    y-label: $y'$,
+  ))
+  ```, side: false)
+]
+
+==== Callouts, braces, and arrows
+
+#c("callout()") names one point: #c("direction:") is a compass name or an
+angle, #c("distance:") how far the label sits from the point, and #c("dot:")
+and #c("frame:") whether the point and the label are marked.
+
+#c("brace()") groups a span. #c("side:") follows the same convention as an
+aligned dimension: #c("\"above\"") and #c("\"left\"") put the brace on the left
+of the direction from #c("from:") to #c("to:").
+
+#c("arrow()") draws a vector between two points, or a path when #c("via:")
+lists waypoints. #c("arrows:") chooses which ends carry an arrowhead, so a
+trajectory can be drawn with none.
+
+#demo[
+  #example(```typ
+  #let s = situation(
+    ceiling("roof", length: 5),
+    pulley("P", at: (on: "roof", at: 35%)),
+    block("W", mass: 2, hanging: "P.bottom",
+      drop: 2, size: 0.8),
+    rope("cord", from: "P.bottom", to: "W.top"),
+  )
+  #scene(s, annotations: (
+    callout(
+      at: (on: "cord", at: 45%),
+      label: [inextensible],
+      direction: "west",
+      distance: 1.2,
+    ),
+    brace(from: "roof.start", to: "roof.end",
+      label: $L$, offset: 0.55),
+    arrow(
+      from: "W.right",
+      via: ((on: "W.right", offset: (1, 0.1)),),
+      to: (on: "W.right", offset: (1.6, 0.9)),
+      label: [swing],
+    ),
+  ))
   ```, side: false)
 ]
 
@@ -2007,7 +2238,7 @@ is still symbolic, every arrow falls back to one length.
 
 Draws the weight resolved into the surface's own axes, with the construction
 lines, the right angle, and the inclination arc. #c("of:") accepts only
-#c("\"weight\"") in 0.1.2.
+#c("\"weight\"") in 0.2.0.
 
 #demo[
   #example(```typ
@@ -2379,7 +2610,8 @@ view's own #c("style:") is merged over it and applies to that view alone.
   [#c("construction-stroke")], [Dashed construction lines.],
   [#c("right-angle-size")], [The right-angle marker in the component view.],
   [#c("length-label-offset")], [How far off a surface #c("lengths: true") writes its length.],
-  [#c("dimension-color"), #c("dimension-stroke"), \ #c("dimension-extension-stroke"), #c("dimension-text")], [Defaults inherited by scene-only dimensions and their dashed projections.],
+  [#c("annotation-color"), #c("annotation-stroke"), \ #c("annotation-text")], [Defaults inherited by every scene annotation.],
+  [#c("dimension-extension-stroke")], [Stroke for the dashed projections a dimension draws.],
   [#c("force-stroke")], [Thickness of a force arrow.],
   [#c("force-length")], [Length drawn for the largest force on a body.],
   [#c("force-floor")], [Shortest an arrow may be drawn, so a small force stays visible.],
@@ -2484,7 +2716,7 @@ These stop compilation with a message naming the element and the reason.
   [A block with neither #c("on:") nor #c("touching:")], [A request for one of them.],
   [#c("touching:") a body declared later], [A note that the other body must come first.],
   [#c("solve") on a body with no #c("mass:")], [The name of the missing quantity.],
-  [#c("solve") on a body resting on a wall or ceiling], [What 0.1.2 supports.],
+  [#c("solve") on a body resting on a wall or ceiling], [What 0.2.0 supports.],
   [A situation whose normal force comes out negative], [The value, and that the body leaves the surface.],
   [#c("solve") on a situation with several bodies and no name], [The list of bodies to choose from.],
   [A zero or negative electrical value], [The component and the invalid #c("resistance:"), #c("capacitance:"), or #c("voltage:") value.],
@@ -2505,7 +2737,7 @@ A regime that cannot be decided is not an error. #c("solve") reports which
 quantity is symbolic and how to state the regime instead.
 
 // ═════════════════════════════════════════════════════════════════════════════
-= What 0.1.2 does not do <limitations>
+= What 0.2.0 does not do <limitations>
 // ═════════════════════════════════════════════════════════════════════════════
 
 The drawing vocabulary is the package; the solved models are a named, finite
@@ -2536,6 +2768,10 @@ declined by name and the reason is the shared unknown that was found:
   This one is not a gap in the package. No solver can answer it without an added
   assumption.
 - #c("components(of:)") for anything but the weight.
+- *Annotations on a free-body diagram.* #c("dimension()"), #c("angle-mark()"),
+  #c("axis()"), #c("callout()"), #c("brace()"), and #c("arrow()") attach to a
+  scene's own geometry, so #c("scene()") and #c("draw()") take them and
+  #c("fbd()") does not.
 
 Circuits are derived in full for every network the grammar can express; see
 @circuit-quantities for what is outside that, which is transient behaviour,

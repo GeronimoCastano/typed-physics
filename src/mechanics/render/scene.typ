@@ -1,4 +1,5 @@
-// Full-scene annotation settings and assembly from focused renderers.
+// Which label each element shows, and full-scene assembly from focused
+// renderers.
 
 #import "../../shared/vector.typ"
 #import "../../shared/expression.typ"
@@ -9,7 +10,7 @@
 #import "structures.typ" as structures
 #import "connectors.typ" as connectors
 #import "loads.typ" as loads
-#import "dimensions.typ" as dimensions
+#import "annotations/lib.typ" as annotation-rendering
 #import "../style.typ": resolve-surface-style
 
 #let render-label = geometry.render-label
@@ -34,9 +35,9 @@
 #let render-torque = loads.render-torque
 #let render-velocity = loads.render-velocity
 #let render-angular-velocity = loads.render-angular-velocity
-#let render-dimensions = dimensions.render-dimensions
+#let render-annotations = annotation-rendering.render-annotations
 
-#let annotation-settings(
+#let label-display-settings(
   selection,
   argument-name,
   default-mode,
@@ -161,13 +162,13 @@
   loads: true,
   frictions: false,
   lengths: false,
-  dimensions: (),
+  annotations: (),
   forces: none,
   force-arrow-lengths: (:),
   solutions: (:),
 ) = {
   let bodies-showing-forces = bodies-named-by(scene, forces)
-  let body-label-settings = annotation-settings(
+  let body-label-settings = label-display-settings(
     labels,
     "labels",
     "name",
@@ -204,7 +205,7 @@
   let ramp-names = scene.surface-order.filter(
     surface-name => scene.surfaces.at(surface-name).kind == "ramp",
   )
-  let angle-label-settings = annotation-settings(
+  let angle-label-settings = label-display-settings(
     angles,
     "angles",
     "value",
@@ -377,5 +378,5 @@
       render-torque(placed-torque, diagram-style)
     }
   }
-  render-dimensions(scene, dimensions, diagram-style)
+  render-annotations(scene, annotations, diagram-style)
 }

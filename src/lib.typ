@@ -16,7 +16,9 @@
 #import "mechanics/models.typ"
 #import "mechanics/report.typ"
 #import "mechanics/forces.typ" as force-enumeration
-#import "mechanics/annotations.typ": dimension
+#import "mechanics/annotations/lib.typ": (
+  angle-mark, arrow, axis, brace, callout, dimension,
+)
 #import "mechanics/validation/lib.typ" as validation
 #import "electricity/lib.typ" as electricity
 
@@ -181,19 +183,72 @@
   )
 }
 
+// The figure views accept the same arguments, so they refuse an unknown one in
+// one place. `dimensions:` is answered by name because a distance is one
+// annotation among several, and an author reaching for it wants `annotations:`.
+#let _validate-view-arguments(
+  unexpected-arguments,
+  public-function,
+  accepted-arguments,
+) = {
+  assert(
+    unexpected-arguments.pos().len() == 0,
+    message: (
+      "typed-physics: "
+        + public-function
+        + " takes no positional arguments after the situation"
+    ),
+  )
+  let unknown-argument-names = unexpected-arguments.named().keys()
+  assert(
+    "dimensions" not in unknown-argument-names,
+    message: (
+      "typed-physics: "
+        + public-function
+        + " takes `annotations:` rather than `dimensions:`; it accepts "
+        + "dimension(), angle-mark(), axis(), callout(), brace(), and arrow()"
+    ),
+  )
+  assert(
+    unknown-argument-names.len() == 0,
+    message: (
+      "typed-physics: "
+        + public-function
+        + " has unknown argument"
+        + if unknown-argument-names.len() == 1 { " " } else { "s " }
+        + unknown-argument-names.map(
+          argument-name => "`" + argument-name + ":`",
+        ).join(", ")
+        + "; accepted arguments are "
+        + accepted-arguments.join(", ")
+    ),
+  )
+}
+
+#let _figure-view-arguments = (
+  "labels", "angles", "loads", "frictions", "lengths", "annotations",
+  "forces", "components", "style",
+)
+
 #let draw(
   s,
+  ..unexpected-arguments,
   labels: "name",
   angles: "value",
   loads: true,
   frictions: false,
   lengths: false,
-  dimensions: (),
+  annotations: (),
   forces: none,
   components: none,
   style: (:),
 ) = {
   _validate-situation(s, "draw()")
+  _validate-view-arguments(
+    unexpected-arguments,
+    "draw()",
+    _figure-view-arguments,
+  )
   validation.validate-boolean(loads, "draw()", "loads")
   validation.validate-boolean(frictions, "draw()", "frictions")
   validation.validate-boolean(lengths, "draw()", "lengths")
@@ -228,7 +283,7 @@
     loads: loads,
     frictions: frictions,
     lengths: lengths,
-    dimensions: dimensions,
+    annotations: annotations,
     forces: forces,
     force-arrow-lengths: arrow-lengths,
     solutions: solutions,
@@ -264,26 +319,16 @@
   loads: true,
   frictions: false,
   lengths: false,
-  dimensions: (),
+  annotations: (),
   forces: none,
   components: none,
   style: (:),
 ) = {
   _validate-situation(s, "scene()")
-  assert(
-    unexpected-arguments.pos().len() == 0,
-    message: "typed-physics: scene() takes no positional arguments after the situation",
-  )
-  assert(
-    unexpected-arguments.named().len() == 0,
-    message: (
-      "typed-physics: scene() has unknown argument"
-        + if unexpected-arguments.named().len() == 1 { " " } else { "s " }
-        + unexpected-arguments.named().keys().map(
-          argument-name => "`" + argument-name + ":`",
-        ).join(", ")
-        + "; accepted arguments are labels, angles, loads, frictions, lengths, dimensions, forces, components, style"
-    ),
+  _validate-view-arguments(
+    unexpected-arguments,
+    "scene()",
+    _figure-view-arguments,
   )
   let diagram-style = _view-style(
     s,
@@ -299,7 +344,7 @@
       loads: loads,
       frictions: frictions,
       lengths: lengths,
-      dimensions: dimensions,
+      annotations: annotations,
       forces: forces,
       components: components,
       style: style,

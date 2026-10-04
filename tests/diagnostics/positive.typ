@@ -313,4 +313,41 @@
 #electricity.solve(symbolic-circuit)
 #electricity.solve(symbolic-circuit, find: "current")
 
+// Every annotation kind, so a constructor and its schema cannot drift apart.
+#let annotated = situation(
+  ground("floor", length: 8),
+  ramp("incline", angle: 30deg, length: 4, from: "floor.end"),
+  block("A", mass: 2, on: "floor", at: 25%),
+  pulley("P", at: (on: "floor", at: 55%, offset: (0, 2.2))),
+  rope("cord", from: "A.top", to: "P.left"),
+)
+#scene(annotated, annotations: (
+  dimension(from: "A.right", to: "incline.foot", label: $d$),
+  angle-mark(from: "floor", to: "incline", label: $theta$),
+  angle-mark(from: "incline", to: (on: "floor", reversed: true), radius: 0.8),
+  axis(at: "A.center", along: "floor", quadrants: "both"),
+  callout(at: "P.center", label: [wheel], direction: 30deg),
+  brace(from: "incline.foot", to: "incline.apex", label: $ell$),
+  arrow(
+    from: "A.left",
+    via: ((on: "A.left", offset: (-0.5, 0.4)),),
+    to: (on: "A.left", offset: (-1, 0)),
+    label: $v$,
+  ),
+))
+
+// Every attachment form a reference accepts.
+#let attached = situation(
+  ground("floor", length: 8),
+  block("A", mass: 1, on: "floor", at: 20%),
+  pulley("P", at: (on: "floor", at: 60%, offset: (0, 2))),
+  rope("cord", from: (on: "A.top", at: 25%), to: (on: "P.rim", at: 62%)),
+  spring("coil", from: (on: "floor.surface", at: 5%, offset: (0pt, 8pt)), to: "A.left"),
+  ball("B", mass: 1, hanging: (on: "P.rim", at: 30%), drop: 1.2, radius: 0.3),
+)
+#scene(attached, annotations: (
+  callout(at: (on: "cord", at: 40%), label: [cord], direction: "north"),
+  dimension(from: (on: "A.bottom-right", offset: (0, 0.3)), to: "P.bottom"),
+))
+
 #import "rope-forces.typ"

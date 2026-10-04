@@ -129,24 +129,65 @@
   "center"
 }
 
-#let anchors-for-kind(kind) = if kind in ("ground", "ceiling", "arc") {
-  ("start", "end", "surface")
-} else if kind == "wall" {
+#let anchors-for-kind(kind) = if kind in (
+  "ground", "ceiling", "arc", "wall",
+) {
   ("start", "end", "surface")
 } else if kind == "ramp" {
   ("start", "end", "surface", "foot", "apex", "base")
 } else if kind == "body" {
-  ("center", "contact", "top", "bottom", "left", "right")
+  (
+    "center", "contact", "top", "bottom", "left", "right", "top-left",
+    "top-right", "bottom-left", "bottom-right", "uphill", "downhill",
+    "outward",
+  )
 } else if kind == "pulley" {
-  ("center", "top", "bottom", "left", "right")
+  ("center", "top", "bottom", "left", "right", "rim")
 } else if kind == "rod" {
-  ("start", "end", "center", "center-of-mass")
+  ("start", "end", "center", "center-of-mass", "rod")
 } else if kind == "pendulum" {
-  ("pivot", "bob", "center")
+  ("pivot", "bob", "center", "string")
 } else if kind in ("pivot", "support") {
   ("center",)
 } else if kind in ("rope", "spring") {
-  ("start", "end", "center")
+  ("start", "end", "center", "line")
 } else {
   ()
+}
+
+// Anchors that are a line or an arc rather than a single point, so an `at:`
+// ratio has somewhere to run.
+#let span-anchors-for-kind(kind) = if kind in (
+  "ground", "ceiling", "arc", "wall", "ramp",
+) {
+  ("surface",)
+} else if kind == "body" {
+  ("top", "bottom", "left", "right", "uphill", "downhill", "outward")
+} else if kind == "pulley" {
+  ("rim",)
+} else if kind == "rod" {
+  ("rod",)
+} else if kind == "pendulum" {
+  ("string",)
+} else if kind in ("rope", "spring") {
+  ("line",)
+} else {
+  ()
+}
+
+// The anchor an `at:` ratio runs along when the reference names no anchor of
+// its own, or `none` when the element's own extent is not something a ratio can
+// measure.
+#let element-span-anchor(kind) = if kind in (
+  "ground", "ceiling", "arc", "wall", "ramp",
+) {
+  "surface"
+} else if kind == "rod" {
+  "rod"
+} else if kind == "pendulum" {
+  "string"
+} else if kind in ("rope", "spring") {
+  "line"
+} else {
+  none
 }

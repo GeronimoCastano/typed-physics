@@ -309,7 +309,7 @@
 ) = {
   assert(
     of == "weight",
-    message: "typed-physics 0.1.1 resolves the weight into components; `of: \"" + of + "\"` is not available yet",
+    message: "typed-physics resolves only the weight into components; `of: \"" + of + "\"` is not available yet",
   )
   let body = _body-centered-at-origin(scene.bodies.at(name))
   // Longer than a free-body arrow: the construction has to clear the body it

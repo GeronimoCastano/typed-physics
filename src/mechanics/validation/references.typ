@@ -10,6 +10,8 @@
 #let _category-of-kind = schema.category-of-kind
 #let _default-anchor = schema.default-anchor
 #let _anchors-for-kind = schema.anchors-for-kind
+#let _span-anchors-for-kind = schema.span-anchors-for-kind
+#let _element-span-anchor = schema.element-span-anchor
 
 #let validate-simple-reference(reference, source-description, argument) = {
   assert(
@@ -24,6 +26,79 @@
         + "; do not include an anchor in this argument"
     ),
   )
+  none
+}
+
+#let validate-anchored-reference(reference, source-description, argument) = {
+  assert(
+    type(reference) == str,
+    message: (
+      "typed-physics: "
+        + source-description
+        + " needs `"
+        + argument
+        + ":` as an element name such as \"A\" or \"A.top\", got "
+        + _value(reference)
+    ),
+  )
+  let parts = reference.split(".")
+  assert(
+    parts.len() <= 2 and parts.all(part => part.len() > 0),
+    message: (
+      "typed-physics: "
+        + source-description
+        + " has malformed `"
+        + argument
+        + ":` "
+        + _value(reference)
+        + "; write \"name\" or \"name.anchor\", for example \"beam.end\""
+    ),
+  )
+  none
+}
+
+// A displacement is written in world units as a number, or as an absolute
+// length that converts to them.
+#let validate-offset(declared-offset, source-description, argument) = {
+  assert(
+    type(declared-offset) == array and declared-offset.len() == 2,
+    message: (
+      "typed-physics: "
+        + source-description
+        + " needs `"
+        + argument
+        + ":` as an (x, y) pair, got "
+        + _value(declared-offset)
+    ),
+  )
+  for offset-component in declared-offset {
+    assert(
+      type(offset-component) in (int, float)
+        or type(offset-component) == type(1pt),
+      message: (
+        "typed-physics: "
+          + source-description
+          + " needs `"
+          + argument
+          + ":` components as numbers in world units or absolute lengths, got "
+          + _value(offset-component)
+      ),
+    )
+    if type(offset-component) == type(1pt) {
+      assert(
+        offset-component.abs == offset-component,
+        message: (
+          "typed-physics: "
+            + source-description
+            + " needs `"
+            + argument
+            + ":` in absolute lengths such as 3pt or 2mm; "
+            + _value(offset-component)
+            + " is relative to the font size"
+        ),
+      )
+    }
+  }
   none
 }
 
@@ -69,7 +144,7 @@
   if type(attachment) == dictionary {
     for key in attachment.keys() {
       assert(
-        key in ("on", "at"),
+        key in ("on", "at", "offset"),
         message: (
           "typed-physics: "
             + source-description
@@ -77,7 +152,7 @@
             + argument
             + ":` reference field \""
             + key
-            + "\"; (on:, at:) references accept only `on:` and `at:`"
+            + "\"; a reference dictionary accepts `on:`, `at:`, and `offset:`"
         ),
       )
     }
@@ -93,12 +168,21 @@
           + " to include `on:` an element name"
       ),
     )
-    validate-simple-reference(attachment.on, source-description, argument + ".on")
-    validate-ratio(
-      attachment.at("at", default: 50%),
+    validate-anchored-reference(
+      attachment.on,
       source-description,
-      argument + ".at",
+      argument + ".on",
     )
+    if "at" in attachment {
+      validate-ratio(attachment.at, source-description, argument + ".at")
+    }
+    if "offset" in attachment {
+      validate-offset(
+        attachment.offset,
+        source-description,
+        argument + ".offset",
+      )
+    }
     return none
   }
   fail(
@@ -106,7 +190,7 @@
     argument,
     attachment,
     (
-      "expected \"name\", \"name.anchor\", or (on: \"name\", at: 50%)"
+      "expected \"name\", \"name.anchor\", or (on: \"name.anchor\", at: 50%, offset: (0, 0.2))"
         + if allow-coordinate { ", or an (x, y) numeric coordinate" } else { "" }
         + if allow-ratio { ", or a ratio between 0% and 100%" } else { "" }
         + if allow-auto { ", or auto" } else { "" }
@@ -116,15 +200,22 @@
   )
 }
 
+#let _reference-string(attachment) = if type(attachment) == dictionary {
+  attachment.on
+} else {
+  attachment
+}
+
 #let attachment-element-name(attachment) = {
-  if type(attachment) == dictionary { return attachment.on }
-  if type(attachment) == str { return attachment.split(".").first() }
+  let reference = _reference-string(attachment)
+  if type(reference) == str { return reference.split(".").first() }
   none
 }
 
 #let attachment-anchor-name(attachment) = {
-  if type(attachment) != str { return auto }
-  let parts = attachment.split(".")
+  let reference = _reference-string(attachment)
+  if type(reference) != str { return auto }
+  let parts = reference.split(".")
   if parts.len() == 2 { parts.at(1) } else { auto }
 }
 
@@ -141,7 +232,7 @@
     argument,
     attachment,
     categories,
-    ratio-categories: ("surface", "structure"),
+    ratio-categories: ("surface", "structure", "body", "pulley"),
   ) = {
     if attachment == none or attachment == auto { return () }
     ((
@@ -274,13 +365,36 @@
         + specification.categories.join(", ")
     ),
   )
-  if type(attachment) == dictionary {
+  let declared-anchor = attachment-anchor-name(attachment)
+  if declared-anchor != auto {
+    let available-anchors = _anchors-for-kind(target.kind)
+    assert(
+      declared-anchor in available-anchors,
+      message: (
+        "typed-physics: "
+          + specification.source-description
+          + " references unavailable anchor \""
+          + target-name
+          + "."
+          + declared-anchor
+          + "\"; "
+          + target.kind
+          + " \""
+          + target-name
+          + "\" has anchors "
+          + available-anchors.join(", ")
+      ),
+    )
+  }
+
+  let takes-a-ratio = type(attachment) == dictionary and "at" in attachment
+  if takes-a-ratio {
     assert(
       target-category in specification.ratio-categories,
       message: (
         "typed-physics: "
           + specification.source-description
-          + " cannot use an (on:, at:) reference along "
+          + " cannot use an `at:` ratio along "
           + target.kind
           + " \""
           + target-name
@@ -291,29 +405,35 @@
           + "\""
       ),
     )
-  } else {
-    let declared-anchor = attachment-anchor-name(attachment)
-    let requested-anchor = if declared-anchor == auto {
-      _default-anchor(target.kind)
+    let ratio-anchor = if declared-anchor == auto {
+      _element-span-anchor(target.kind)
     } else {
       declared-anchor
     }
-    let available-anchors = _anchors-for-kind(target.kind)
+    let span-anchors = _span-anchors-for-kind(target.kind)
+    let available-spans = if span-anchors.len() == 0 {
+      target.kind + " \"" + target-name + "\" has no anchor a ratio can run along"
+    } else {
+      (
+        "anchors that a ratio can run along are "
+          + span-anchors.map(
+            anchor-name => "\"" + target-name + "." + anchor-name + "\"",
+          ).join(", ")
+      )
+    }
+    let named-anchor = if declared-anchor == auto { "" } else {
+      "." + declared-anchor
+    }
     assert(
-      requested-anchor in available-anchors,
+      ratio-anchor in span-anchors,
       message: (
         "typed-physics: "
           + specification.source-description
-          + " references unavailable anchor \""
+          + " takes an `at:` ratio along \""
           + target-name
-          + "."
-          + requested-anchor
-          + "\"; "
-          + target.kind
-          + " \""
-          + target-name
-          + "\" has anchors "
-          + available-anchors.join(", ")
+          + named-anchor
+          + "\", which is a single point; "
+          + available-spans
       ),
     )
   }

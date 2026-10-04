@@ -3,6 +3,11 @@
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: arc, content, line
 #import "../../shared/vector.typ"
+#import "../placement/lib.typ" as placement
+
+// A body's outline in world coordinates comes from its placed frame, so every
+// renderer measures the same rectangle the anchors are read from.
+#let body-corners = placement.body-corners
 
 #let render-label(
   position,
@@ -124,32 +129,6 @@
 
 // ── Surfaces ─────────────────────────────────────────────────────────────────
 
-
-#let body-corners(body) = {
-  let half-tangent-span = vector.scale(body.direction, body.half-extent-along)
-  let half-normal-span = vector.scale(
-    body.outward-normal,
-    body.half-extent-normal,
-  )
-  (
-    vector.subtract(
-      vector.subtract(body.center, half-tangent-span),
-      half-normal-span,
-    ),
-    vector.subtract(
-      vector.add(body.center, half-tangent-span),
-      half-normal-span,
-    ),
-    vector.add(
-      vector.add(body.center, half-tangent-span),
-      half-normal-span,
-    ),
-    vector.add(
-      vector.subtract(body.center, half-tangent-span),
-      half-normal-span,
-    ),
-  )
-}
 
 // How far a body's own outline reaches in a direction, so an arrow can start
 // where the body ends instead of crossing whatever is drawn inside it. A round

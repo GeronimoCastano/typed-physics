@@ -947,7 +947,7 @@ The declaration changes in one place; every view follows.
   )
   scene(
     s,
-    dimensions: dimension(
+    annotations: dimension(
       from: "coil.start",
       to: "coil.end",
       offset: 0.75,
@@ -965,7 +965,7 @@ The declaration changes in one place; every view follows.
   )
   scene(
     s,
-    dimensions: dimension(
+    annotations: dimension(
       from: "incline.foot",
       to: "incline.apex",
       offset: 1.1,
@@ -987,7 +987,7 @@ The declaration changes in one place; every view follows.
   )
   scene(
     s,
-    dimensions: dimension(
+    annotations: dimension(
       from: (0, 0),
       to: (0, 3),
       offset: 0.65,
@@ -1004,7 +1004,7 @@ The declaration changes in one place; every view follows.
   let s = situation(ground(length: 6))
   scene(
     s,
-    dimensions: (
+    annotations: (
       dimension(
         from: (0, 0.65),
         to: (6, 0.65),
@@ -1037,7 +1037,7 @@ The declaration changes in one place; every view follows.
   )
   scene(
     s,
-    dimensions: dimension(
+    annotations: dimension(
       from: "A.center",
       to: "B.center",
       offset: 1.35,
@@ -1058,7 +1058,7 @@ The declaration changes in one place; every view follows.
   )
   scene(
     s,
-    dimensions: (
+    annotations: (
       dimension(
         from: "incline.apex",
         to: "ground",
@@ -2275,13 +2275,259 @@ its own line.
   )
   let placed-spring = s.connectors.first()
   assert(placed-spring.start.at(1) == placed-spring.end.at(1))
-  scene(s, dimensions: (
+  scene(s, annotations: (
     dimension(
       from: "A.right",
       to: "B.left",
       orientation: "horizontal",
       side: "above",
       label: $d$,
+    ),
+  ))
+})
+
+#pagebreak()
+
+== General-purpose annotations
+
+#section("Every annotation kind on one scene", {
+  let s = situation(
+    ground("floor", length: 9),
+    ramp("incline", angle: 32deg, length: 4.6, from: "floor.end"),
+    block("A", mass: 2, on: "floor", at: 26%),
+    pulley("P", at: (on: "floor", at: 58%, offset: (0, 2.4))),
+    rope("cord", from: "A.top", to: "P.left"),
+  )
+  scene(
+    s,
+    angles: "none",
+    annotations: (
+      angle-mark(from: "floor", to: "incline", label: $theta$, radius: 1.1),
+      axis(at: (on: "floor", at: 8%, offset: (0, 2.4)), length: 0.7),
+      dimension(
+        from: "A.right",
+        to: "incline.foot",
+        orientation: "horizontal",
+        label: $d$,
+      ),
+      brace(from: "incline.foot", to: "incline.apex", label: $ell$, offset: 0.3),
+      callout(at: "P.center", label: [frictionless], direction: "north"),
+      arrow(
+        from: "A.left",
+        to: (on: "A.left", offset: (-1.4, 0)),
+        label: $v_0$,
+        label-position: "center",
+      ),
+    ),
+  )
+})
+
+#section("An axis turned into the frame a block is placed in", {
+  let s = situation(
+    ramp("slope", angle: 25deg, length: 6),
+    block("B", mass: 3, on: "slope", at: 55%),
+  )
+  scene(s, annotations: axis(
+    at: "B.center",
+    along: "slope",
+    length: 1.3,
+    x-label: $x'$,
+    y-label: $y'$,
+  ))
+})
+
+#section("A right angle is marked as a square rather than as an arc", {
+  let s = situation(
+    ground("floor", length: 6),
+    wall("side", side: left, height: 2.6),
+    block("A", mass: 1, on: "floor", at: 55%),
+  )
+  scene(s, annotations: (
+    angle-mark(from: "floor", to: "side", at: "floor.start", label: none),
+    angle-mark(
+      from: "floor",
+      to: 60deg,
+      at: "A.bottom-right",
+      radius: 0.8,
+      label: $phi$,
+    ),
+  ))
+})
+
+#section("Reversing one direction marks the supplementary angle", {
+  let s = situation(
+    ground("floor", length: 7),
+    ramp("incline", angle: 35deg, length: 3, from: (on: "floor", at: 45%)),
+  )
+  scene(s, angles: "none", annotations: (
+    angle-mark(from: "floor", to: "incline", radius: 0.7),
+    angle-mark(
+      from: "incline",
+      to: (on: "floor", reversed: true),
+      radius: 1.1,
+      label: $180 degree - theta$,
+    ),
+  ))
+})
+
+#section("A path drawn through waypoints, and a callout on a connector", {
+  let s = situation(
+    ceiling("roof", length: 6),
+    pulley("P", at: (on: "roof", at: 30%)),
+    block("W", mass: 2, hanging: "P.bottom", drop: 2.2, size: 0.8),
+    rope("cord", from: "P.bottom", to: "W.top"),
+  )
+  scene(s, annotations: (
+    callout(
+      at: (on: "cord", at: 45%),
+      label: [inextensible cord],
+      direction: "west",
+      distance: 1.4,
+    ),
+    arrow(
+      from: "W.right",
+      via: ((on: "W.right", offset: (1.1, 0.1)),),
+      to: (on: "W.right", offset: (1.7, 1.0)),
+      label: [swing],
+      arrows: "end",
+    ),
+    dimension(
+      from: "P.bottom",
+      to: "W.top",
+      orientation: "vertical",
+      side: "right",
+      offset: 2.6,
+      label: $L$,
+    ),
+  ))
+})
+
+#pagebreak()
+
+== Richer attachment points
+
+#section("A ratio runs along a body edge, a pulley rim, and a connector", {
+  let s = situation(
+    ground("floor", length: 8),
+    block("A", mass: 2, on: "floor", at: 20%, size: 1.4),
+    pulley("P", at: (on: "floor", at: 62%, offset: (0, 2.4)), radius: 0.5),
+    rope("cord", from: "A.top", to: "P.left"),
+  )
+  scene(s, annotations: (
+    callout(
+      at: (on: "A.top", at: 20%),
+      label: [20% along `A.top`],
+      direction: "north-west",
+      distance: 1.4,
+    ),
+    callout(
+      at: (on: "P.rim", at: 30%),
+      label: [30% around `P.rim`],
+      direction: "north",
+      distance: 0.9,
+    ),
+    callout(
+      at: (on: "cord", at: 50%),
+      label: [halfway along `cord`],
+      direction: "south-east",
+      distance: 1.7,
+    ),
+  ))
+})
+
+#section("A displacement is written in world units or in absolute lengths", {
+  let s = situation(
+    ground("floor", length: 7),
+    block("A", mass: 2, on: "floor", at: 30%),
+    block("B", mass: 2, on: "floor", at: 70%),
+  )
+  scene(s, annotations: (
+    dimension(
+      from: (on: "A.top-right", offset: (0, 0.4)),
+      to: (on: "B.top-left", offset: (0, 0.4)),
+      label: $d$,
+      offset: 0,
+    ),
+    callout(
+      at: (on: "A.center", offset: (0pt, 12pt)),
+      label: [12pt above `A.center`],
+      direction: "south-west",
+      distance: 1.2,
+    ),
+  ))
+})
+
+#let anchor-marks(element, anchor-names, distance: 0.75, turn: 60deg) = {
+  anchor-names.enumerate().map(((anchor-index, anchor-name)) => callout(
+    at: element + "." + anchor-name,
+    label: raw(anchor-name),
+    direction: turn * anchor-index,
+    distance: distance,
+    frame: false,
+    text: (size: 6pt),
+  ))
+}
+
+#let tilted-block = situation(
+  ramp("incline", angle: 20deg, length: 5),
+  block("A", mass: 1, on: "incline", at: 50%, size: 1.3),
+)
+
+#section("The sides of the box a body occupies", scene(
+  tilted-block,
+  angles: "none",
+  annotations: anchor-marks(
+    "A",
+    ("center", "contact", "top", "bottom", "left", "right"),
+    distance: 1.5,
+  ),
+))
+
+#section("The corners of that box", scene(
+  tilted-block,
+  angles: "none",
+  annotations: anchor-marks(
+    "A",
+    ("top-left", "top-right", "bottom-right", "bottom-left"),
+    distance: 1.5,
+    turn: 90deg,
+  ),
+))
+
+#section("Every ramp and pulley anchor resolves", {
+  let s = situation(
+    ramp("incline", angle: 20deg, length: 4.5),
+    pulley("P", at: (on: "incline.apex", offset: (1.8, 0))),
+  )
+  scene(
+    s,
+    angles: "none",
+    annotations: anchor-marks(
+      "incline",
+      ("start", "end", "surface", "foot", "apex", "base"),
+      turn: 55deg,
+    ) + anchor-marks(
+      "P",
+      ("center", "top", "bottom", "left", "right", "rim"),
+      turn: 55deg,
+    ),
+  )
+})
+
+#section("A body's own faces are named in the frame it was placed in", {
+  let s = situation(
+    ramp("incline", angle: 28deg, length: 5),
+    block("A", mass: 1, on: "incline", at: 50%, size: 1.3),
+  )
+  scene(s, angles: "none", annotations: (
+    callout(at: "A.uphill", label: [`uphill`], direction: "east", distance: 1),
+    callout(at: "A.downhill", label: [`downhill`], direction: "west", distance: 1.2),
+    callout(at: "A.outward", label: [`outward`], direction: "north", distance: 0.9),
+    callout(
+      at: (on: "A.outward", at: 100%),
+      label: [100% along `A.outward`],
+      direction: "north-east",
+      distance: 1.5,
     ),
   ))
 })

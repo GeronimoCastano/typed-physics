@@ -2,75 +2,18 @@
 
 #import "@preview/cetz:0.5.2"
 #import cetz.draw: content, line
-#import "../../shared/vector.typ"
-#import "../placement/lib.typ" as placement
-#import "geometry.typ" as geometry
+#import "../../../shared/vector.typ"
+#import "../geometry.typ" as geometry
+#import "points.typ"
 
 #let body-corners = geometry.body-corners
 #let rod-corners = geometry.rod-corners
 
-#let _dimension-endpoint(scene, endpoint-reference) = {
-  let endpoint-is-raw-coordinate = (
-    type(endpoint-reference) == array
-      and endpoint-reference.len() == 2
-      and endpoint-reference.all(
-        coordinate => type(coordinate) in (int, float),
-      )
-  )
-  if endpoint-is-raw-coordinate { return endpoint-reference }
-
-  if type(endpoint-reference) == dictionary {
-    let connector-name = endpoint-reference.at("on", default: none)
-    if scene.connectors.any(connector => connector.name == connector-name) {
-      panic(
-        "typed-physics: dimension() cannot use an (on:, at:) ratio along connector \""
-          + connector-name
-          + "\"; use \""
-          + connector-name
-          + ".start\", \".center\", or \".end\"",
-      )
-    }
-  }
-
-  if type(endpoint-reference) == str {
-    let reference-parts = endpoint-reference.split(".")
-    assert(
-      reference-parts.len() <= 2,
-      message: "typed-physics: dimension() endpoint \"" + endpoint-reference + "\" must name one anchor",
-    )
-    let element-name = reference-parts.first()
-    let connector = scene.connectors.find(
-      placed-connector => placed-connector.name == element-name,
-    )
-    if connector != none {
-      let anchor-name = if reference-parts.len() == 2 {
-        reference-parts.at(1)
-      } else {
-        "center"
-      }
-      assert(
-        anchor-name in ("start", "end", "center"),
-        message: "typed-physics: connector \"" + element-name + "\" has start, end, and center anchors",
-      )
-      return if anchor-name == "start" {
-        connector.start
-      } else if anchor-name == "end" {
-        connector.end
-      } else {
-        vector.midpoint(connector.start, connector.end)
-      }
-    }
-  }
-
-  placement.resolve-attachment-point(
-    endpoint-reference,
-    scene.surfaces,
-    scene.bodies,
-    scene.pulleys,
-    "dimension()",
-    placed-structures: scene.structures,
-  )
-}
+#let _dimension-endpoint(scene, endpoint-reference) = points.annotation-point(
+  scene,
+  endpoint-reference,
+  "dimension()",
+)
 
 #let _dimension-arrow-marks(dimension-annotation, dimension-color) = (
   start: if dimension-annotation.arrows in ("both", "start") {
@@ -391,13 +334,13 @@
   let left-normal-direction = vector.left-normal(dimension-direction)
 
   let dimension-color = if dimension-annotation.color == auto {
-    diagram-style.dimension-color
+    diagram-style.annotation-color
   } else {
     dimension-annotation.color
   }
   let dimension-stroke = (
     if dimension-annotation.stroke == auto {
-      diagram-style.dimension-stroke
+      diagram-style.annotation-stroke
     } else {
       dimension-annotation.stroke
     }
@@ -445,7 +388,7 @@
   }
   let dimension-text-style = (
     (fill: dimension-color)
-      + diagram-style.dimension-text
+      + diagram-style.annotation-text
       + dimension-annotation.text
   )
   let styled-label = text(..dimension-text-style, displayed-label)
@@ -487,54 +430,3 @@
     anchor: "center",
   )
 }
-
-#let render-dimensions(scene, dimensions, diagram-style) = {
-  let dimension-annotations = if dimensions == none {
-    ()
-  } else if type(dimensions) == dictionary {
-    (dimensions,)
-  } else {
-    assert(
-      type(dimensions) == array,
-      message: "typed-physics: dimensions: must be dimension(...) or an array of them",
-    )
-    dimensions
-  }
-  for dimension-annotation in dimension-annotations {
-    assert(
-      type(dimension-annotation) == dictionary
-        and dimension-annotation.at("kind", default: none) == "dimension",
-      message: "typed-physics: dimensions: accepts only dimension(...) annotations",
-    )
-    let dimension-fields = (
-      "kind", "from", "to", "orientation", "offset", "side", "label",
-      "label-position", "label-offset", "label-rotation", "label-fill",
-      "arrows", "arrow-tip", "arrow-scale", "extensions", "extension-gap",
-      "extension-stroke", "stroke", "color", "text",
-    )
-    for field in dimension-annotation.keys() {
-      assert(
-        field in dimension-fields,
-        message: (
-          "typed-physics: dimensions: annotation has unknown field `"
-            + field
-            + ":`; create it with dimension() to validate its arguments"
-        ),
-      )
-    }
-    let missing-fields = dimension-fields.filter(
-      field => field not in dimension-annotation,
-    )
-    assert(
-      missing-fields.len() == 0,
-      message: (
-        "typed-physics: dimensions: malformed dimension annotation is missing "
-          + missing-fields.map(field => "`" + field + ":`").join(", ")
-          + "; create it with dimension()"
-      ),
-    )
-    render-dimension(scene, dimension-annotation, diagram-style)
-  }
-}
-
-// Which bodies a view argument names: none, one, several, or all of them.
