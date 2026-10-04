@@ -72,6 +72,9 @@
       reaching-elements.at(referenced-name).push((
         kind: declaration-kind,
         name: declared-name,
+        endpoint: if connector-endpoints == none { none } else {
+          if reference-index == 0 { "start" } else { "end" }
+        },
         far-end: if connector-endpoints == none { none } else {
           connector-endpoints.at(reference-index)
         },

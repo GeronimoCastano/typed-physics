@@ -8,7 +8,7 @@
 #import "@preview/cetz:0.5.2"
 #import "../src/lib.typ" as physics
 
-#let version = "0.1.1"
+#let version = "0.1.2"
 #let accent = rgb("#1971C2")
 #let accent-soft = rgb("#E7F0FA")
 
@@ -219,13 +219,13 @@ Import the package from the Typst preview namespace. A wildcard import gives you
 every public symbol:
 
 ```typ
-#import "@preview/typed-physics:0.1.1": *
+#import "@preview/typed-physics:0.1.2": *
 ```
 
 Or import only what you need:
 
 ```typ
-#import "@preview/typed-physics:0.1.1": situation, ramp, block, scene, fbd, solve
+#import "@preview/typed-physics:0.1.2": situation, ramp, block, scene, fbd, solve
 ```
 
 #warn[
@@ -582,7 +582,7 @@ Electrical names live under the #c("electricity") namespace so a circuit's
 collide with mechanics declarations.
 
 ```typ
-#import "@preview/typed-physics:0.1.1": electricity as e
+#import "@preview/typed-physics:0.1.2": electricity as e
 
 #e.dc-circuit(source, network, style: (:))
 #e.voltage-source(name, voltage: none, unit: auto, label: auto, style: (:))
@@ -2007,7 +2007,7 @@ is still symbolic, every arrow falls back to one length.
 
 Draws the weight resolved into the surface's own axes, with the construction
 lines, the right angle, and the inclination arc. #c("of:") accepts only
-#c("\"weight\"") in 0.1.1.
+#c("\"weight\"") in 0.1.2.
 
 #demo[
   #example(```typ
@@ -2484,7 +2484,7 @@ These stop compilation with a message naming the element and the reason.
   [A block with neither #c("on:") nor #c("touching:")], [A request for one of them.],
   [#c("touching:") a body declared later], [A note that the other body must come first.],
   [#c("solve") on a body with no #c("mass:")], [The name of the missing quantity.],
-  [#c("solve") on a body resting on a wall or ceiling], [What 0.1.1 supports.],
+  [#c("solve") on a body resting on a wall or ceiling], [What 0.1.2 supports.],
   [A situation whose normal force comes out negative], [The value, and that the body leaves the surface.],
   [#c("solve") on a situation with several bodies and no name], [The list of bodies to choose from.],
   [A zero or negative electrical value], [The component and the invalid #c("resistance:"), #c("capacitance:"), or #c("voltage:") value.],
@@ -2505,7 +2505,7 @@ A regime that cannot be decided is not an error. #c("solve") reports which
 quantity is symbolic and how to state the regime instead.
 
 // ═════════════════════════════════════════════════════════════════════════════
-= What 0.1.1 does not do <limitations>
+= What 0.1.2 does not do <limitations>
 // ═════════════════════════════════════════════════════════════════════════════
 
 The drawing vocabulary is the package; the solved models are a named, finite

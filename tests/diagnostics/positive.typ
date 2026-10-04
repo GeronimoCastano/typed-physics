@@ -312,3 +312,5 @@
 )
 #electricity.solve(symbolic-circuit)
 #electricity.solve(symbolic-circuit, find: "current")
+
+#import "rope-forces.typ"

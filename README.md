@@ -5,7 +5,7 @@ A Typst drawing library that also understands physics.
 ![Block on an incline](assets/readme/incline.png)
 
 ```typst
-#import "@preview/typed-physics:0.1.1": *
+#import "@preview/typed-physics:0.1.2": *
 
 #let s = situation(
   ramp("incline", angle: 32deg, length: 8),
@@ -133,9 +133,14 @@ body anchor and stays horizontal. Add an explicit wall ratio such as
 )
 
 #scene(s, labels: "both", frictions: true)
+#fbd(s, "A")
+#fbd(s, "B")
 ```
 
-![Block, pulley, and hanging mass](assets/readme/pulley.png)
+![Block, pulley, and hanging mass with their free-body diagrams](assets/readme/pulley.png)
+
+The free-body diagrams show tension along the rope and friction opposing the
+pull on A. The shared tension and the two-body motion are not solved.
 
 ### A DC circuit
 
@@ -144,7 +149,7 @@ branch of a `parallel` travels between the split and join nodes, which is how a
 network takes a shape.
 
 ```typst
-#import "@preview/typed-physics:0.1.1": electricity as e
+#import "@preview/typed-physics:0.1.2": electricity as e
 
 #let circuit = e.dc-circuit(
   e.voltage-source("V", voltage: 18),

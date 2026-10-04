@@ -99,6 +99,56 @@
   if applied-load-count <= 1 { $F$ } else { $F_#(load-index + 1)$ }
 }
 
+#let _rope-forces-on-body(scene, body, solution) = {
+  let attached-ropes = body.reached-by.filter(element => element.kind == "rope")
+  attached-ropes.enumerate().map(((rope-index, attachment)) => {
+    let rope = scene.connectors.find(connector => connector.name == attachment.name)
+    let body-is-at-start = attachment.endpoint == "start"
+    let attachment-position = if body-is-at-start { rope.start } else { rope.end }
+    let next-rope-position = if rope.over != none {
+      if body-is-at-start { rope.start-tangent } else { rope.end-tangent }
+    } else {
+      if body-is-at-start { rope.end } else { rope.start }
+    }
+    (
+      role: "tension",
+      symbol: if attached-ropes.len() == 1 { $T$ } else { $T_#(rope-index + 1)$ },
+      direction: vector.normalized(vector.subtract(next-rope-position, attachment-position)),
+      magnitude: if solution == none or "tension" not in solution { none } else {
+        solution.tension.expression
+      },
+      applied-at: attachment-position,
+      style: (:),
+    )
+  })
+}
+
+#let _unsolved-friction-direction(body, acting-forces) = {
+  let tangential-directions(quantities) = quantities.filter(quantity => {
+    let magnitude = if quantity.magnitude == none { none } else {
+      expression.value-of(quantity.magnitude)
+    }
+    magnitude == none or calc.abs(magnitude) > 1e-9
+  }).map(quantity => vector.dot-product(quantity.direction, body.direction))
+    .filter(component => calc.abs(component) > 1e-9)
+
+  let motion-directions = tangential-directions(body.velocities)
+  let driving-directions = tangential-directions(acting-forces + body.loads)
+  let candidate-directions = if motion-directions.len() > 0 {
+    motion-directions
+  } else {
+    driving-directions
+  }
+  // Unknown opposing forces cannot select a motion direction without a model.
+  let all-directions-are-positive = (
+    candidate-directions.len() > 0
+      and candidate-directions.all(component => component > 0)
+  )
+  if all-directions-are-positive { vector.reversed(body.direction) } else {
+    body.direction
+  }
+}
+
 // The forces acting on one body, in the order a reader expects to meet them.
 // `solution` fills in the magnitudes and the friction direction that only
 // follow from balancing the body; without one the contact forces are still
@@ -118,10 +168,15 @@
     ))
   }
 
-  // A body held up by something other than a surface still has a force holding
-  // it up, and the free-body diagram is entitled to show it whether or not a
-  // model was able to give it a magnitude.
-  if body.hangs-from != none {
+  let rope-forces = _rope-forces-on-body(scene, body, solution)
+  acting-forces += rope-forces
+  let has-explicit-holding-rope = body.reached-by.any(attachment => (
+    attachment.kind == "rope"
+      and attachment.far-end == body.hangs-from-element
+  ))
+
+  // A hanging attachment implies a supporting force even without a drawn rope.
+  if body.hangs-from != none and not has-explicit-holding-rope {
     acting-forces.push((
       role: "tension",
       symbol: $T$,
@@ -139,6 +194,9 @@
   }
 
   if body.support != none {
+    let unsolved-friction-direction = if solution == none {
+      _unsolved-friction-direction(body, acting-forces)
+    } else { none }
     acting-forces.push((
       role: "normal",
       symbol: $N$,
@@ -170,7 +228,7 @@
           $f_s$
         },
         direction: if solution == none {
-          body.direction
+          unsolved-friction-direction
         } else {
           solution.friction.direction
         },

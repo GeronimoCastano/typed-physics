@@ -11,4 +11,11 @@
   rope("cord", from: "A.right", to: "B.top", over: "wheel"),
 )
 
-#scene(s, labels: "both", frictions: true)
+#grid(
+  columns: (auto, auto, auto),
+  column-gutter: 0.8cm,
+  align: center,
+  scene(s, labels: "both", frictions: true),
+  fbd(s, "A"),
+  fbd(s, "B"),
+)

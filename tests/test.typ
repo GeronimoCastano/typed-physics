@@ -2285,3 +2285,42 @@ its own line.
     ),
   ))
 })
+
+#pagebreak()
+
+== Rope tension and friction directions (issue #2)
+
+#import "diagnostics/rope-forces.typ": pulley-situation
+
+#let tension-regression = pulley-situation()
+
+#section("Reported setup: 4 kg on the floor, 3 kg hanging", scene(
+  tension-regression,
+  labels: "both",
+  frictions: true,
+))
+
+#section("A: tension toward the pulley, friction away from it; B: one upward tension", grid(
+  columns: (1fr, 1fr),
+  align: center,
+  fbd(tension-regression, "A"),
+  fbd(tension-regression, "B"),
+))
+
+#let mirrored-tension-regression = pulley-situation(leftward: true, reverse-ends: true)
+
+#section("Pulley on the left, with the rope endpoints declared in reverse", scene(
+  mirrored-tension-regression,
+  labels: "both",
+))
+
+#section("A: tension leftward, friction rightward", grid(
+  columns: (1fr, 1fr),
+  align: center,
+  fbd(mirrored-tension-regression, "A"),
+  fbd(mirrored-tension-regression, "B"),
+))
+
+The assertions check both endpoint orders on both sides, the local rope
+tangents, the friction directions, and that each hanging body has only one
+tension. Tension magnitudes remain unknown for this coupled system.

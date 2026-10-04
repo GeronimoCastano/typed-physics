@@ -3,7 +3,7 @@ set -eu
 
 usage() {
   echo "Usage: scripts/package-preview.sh <version> <typst-packages-repo>" >&2
-  echo "Example: scripts/package-preview.sh 0.1.1 /path/to/typst/packages" >&2
+  echo "Example: scripts/package-preview.sh 0.1.2 /path/to/typst/packages" >&2
 }
 
 if [ "$#" -ne 2 ]; then
