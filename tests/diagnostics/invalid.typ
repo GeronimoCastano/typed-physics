@@ -469,6 +469,57 @@
   )
 } else if selected-case == "renamed-style-key" {
   situation(ground(), style: (dimension-color: red))
+} else if selected-case == "ceiling-from-with-height" {
+  situation(ground("floor", length: 6), ceiling("roof", from: "floor.end", height: 3))
+} else if selected-case == "ceiling-from-wall" {
+  situation(wall("side", side: left, height: 3), ceiling("roof", from: "side.end"))
+} else if selected-case == "arc-center-ratio" {
+  situation(arc("loop", radius: 2), pulley("P", at: (on: "loop.center", at: 40%)))
+} else if selected-case == "pulley-pair-tilted-rope" {
+  let s = situation(
+    ramp("incline", angle: 30deg, length: 7),
+    pulley("P", at: "incline.apex", radius: 0.3),
+    block("A", mass: 4, on: "incline", at: 55%, size: 1, mu: 0.2),
+    block("B", mass: 4, hanging: "P.right", drop: 2, size: 1),
+    rope("cord", from: "A.uphill", to: "B.top", over: "P"),
+  )
+  solve(s, "A")
+} else if selected-case == "pulley-pair-unhung-body" {
+  let s = situation(
+    ceiling("roof", length: 8, height: 5),
+    pulley("P", at: (on: "roof", offset: (0, -0.5)), radius: 0.5),
+    block("A", mass: 3, hanging: "roof", drop: 2, size: 0.8),
+    block("B", mass: 5, hanging: "P.right", drop: 2, size: 0.8),
+    rope("cord", from: "A.top", to: "B.top", over: "P"),
+  )
+  solve(s, "A")
+} else if selected-case == "pulley-pair-assume-static-fails" {
+  let s = situation(
+    ramp("incline", angle: 30deg, length: 7),
+    pulley("P", at: "incline.apex", radius: 0.5),
+    block("A", mass: 4, on: "incline", at: 55%, size: 1, mu: (s: 0.30, k: 0.22)),
+    block("B", mass: 4, hanging: "P.right", drop: 2, size: 1),
+    rope("cord", from: "A.uphill", to: "B.top", over: "P"),
+  )
+  solve(s, "A", assume: "static")
+} else if selected-case == "pulley-pair-assume-sliding-fails" {
+  let s = situation(
+    ceiling("roof", length: 8, height: 5),
+    pulley("P", at: (on: "roof", offset: (0, -0.5)), radius: 0.5),
+    block("A", mass: 3, hanging: "P.left", drop: 2, size: 0.8),
+    block("B", mass: 3, hanging: "P.right", drop: 2, size: 0.8),
+    rope("cord", from: "A.top", to: "B.top", over: "P"),
+  )
+  solve(s, "A", assume: "sliding")
+} else if selected-case == "pulley-pair-atwood-normal" {
+  let s = situation(
+    ceiling("roof", length: 8, height: 5),
+    pulley("P", at: (on: "roof", offset: (0, -0.5)), radius: 0.5),
+    block("A", mass: 3, hanging: "P.left", drop: 2, size: 0.8),
+    block("B", mass: 5, hanging: "P.right", drop: 2, size: 0.8),
+    rope("cord", from: "A.top", to: "B.top", over: "P"),
+  )
+  solve(s, "A", find: "normal")
 } else {
   panic("diagnostic harness: unknown case " + repr(selected-case))
 }

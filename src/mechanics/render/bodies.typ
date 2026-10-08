@@ -120,6 +120,7 @@
     offset: (0, 0),
     rotation: 0deg,
   ),
+  mass-label-point: none,
 ) = {
   let body-style = resolve-body-style(diagram-style, body.style)
   let half-along = body.half-extent-along
@@ -167,7 +168,7 @@
         }
         if displayed-mass != none {
           render-label(
-            (body.center.at(0), body-top-height(body) + 0.3),
+            mass-label-point,
             displayed-mass,
             body-style.label-text,
             offset: label-annotation.offset,

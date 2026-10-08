@@ -2546,7 +2546,7 @@ its own line.
   frictions: true,
 ))
 
-#section("A: tension toward the pulley, friction away from it; B: one upward tension", grid(
+#section("A: tension toward the pulley, no friction arrow because the pair is undecided; B: one upward tension", grid(
   columns: (1fr, 1fr),
   align: center,
   fbd(tension-regression, "A"),
@@ -2560,7 +2560,7 @@ its own line.
   labels: "both",
 ))
 
-#section("A: tension leftward, friction rightward", grid(
+#section("A: tension leftward, and no friction arrow because the pair is undecided", grid(
   columns: (1fr, 1fr),
   align: center,
   fbd(mirrored-tension-regression, "A"),
@@ -2568,5 +2568,175 @@ its own line.
 ))
 
 The assertions check both endpoint orders on both sides, the local rope
-tangents, the friction directions, and that each hanging body has only one
-tension. Tension magnitudes remain unknown for this coupled system.
+tangents, and that each hanging body has only one tension. The rope meets the
+floor at an angle, so this pair is declined: its tension stays unknown, and
+friction is not drawn because nothing decides which way it points. The solved
+pulley pairs follow at the end of this file.
+
+#pagebreak()
+
+== Two bodies over a pulley: the modified Atwood machine
+
+#let modified-atwood = situation(
+  ramp("incline", angle: 30deg, length: 7),
+  pulley("P", at: "incline.apex", radius: 0.5),
+  block("A", mass: 4, on: "incline", at: 55%, size: 1, mu: (s: 0.30, k: 0.22)),
+  block("B", mass: 4, hanging: "P.right", drop: 2, size: 1),
+  rope("cord", from: "A.uphill", to: "B.top", over: "P"),
+)
+
+#section("The rope runs parallel to the incline; B hangs on a vertical rope", scene(
+  modified-atwood,
+  labels: "both",
+  forces: true,
+))
+
+#section("Free-body diagrams: friction on A points down the slope, where the regime says it goes", grid(
+  columns: (1fr, 1fr),
+  align: center,
+  fbd(modified-atwood, "A"),
+  fbd(modified-atwood, "B"),
+))
+
+#section("Answers for A, which are the same for B", {
+  solve(modified-atwood, "A")
+  linebreak()
+  solve(modified-atwood, "A", find: "tension")
+  linebreak()
+  solve(modified-atwood, "A", find: "normal")
+  linebreak()
+  solve(modified-atwood, "A", find: "friction")
+  linebreak()
+  solve(modified-atwood, "B", find: "tension")
+})
+
+#pagebreak()
+
+== The Atwood machine, and a direction that flips
+
+#let atwood-machine = situation(
+  ceiling("roof", length: 8, height: 5),
+  pulley("P", at: (on: "roof", offset: (0, -0.8)), radius: 0.8),
+  block("A", mass: 3, hanging: "P.left", drop: 2, size: 0.8),
+  block("B", mass: 5, hanging: "P.right", drop: 2, size: 0.8),
+  rope("cord", from: "A.top", to: "B.top", over: "P"),
+)
+
+#section("Two hanging masses over an ideal pulley", scene(
+  atwood-machine,
+  labels: "both",
+  forces: true,
+))
+
+#section("Answers: the heavier body descends", {
+  solve(atwood-machine, "A")
+  linebreak()
+  solve(atwood-machine, "A", find: "tension")
+})
+
+// A = 8 kg and B = 3 kg, so the hanging weight is less than A's share down the
+// slope and A slides down. mu_s = 0.10 (6.80 N) is below the 9.81 N driving
+// force, and mu_k = 0.05 gives f_k = 3.40 N, so a = (9.81 - 3.40) / 11 = 0.58 m/s^2
+// and T = 3 (9.81 + 0.58) = 31.2 N.
+#let light-slope-pulley = situation(
+  ramp("incline", angle: 30deg, length: 7),
+  pulley("P", at: "incline.apex", radius: 0.5),
+  block("A", mass: 8, on: "incline", at: 55%, size: 1, mu: (s: 0.10, k: 0.05)),
+  block("B", mass: 3, hanging: "P.right", drop: 2, size: 1),
+  rope("cord", from: "A.uphill", to: "B.top", over: "P"),
+)
+
+// The arrow floor is lowered here so the shorter friction arrow does not hide
+// the longer tension arrow pointing the same way.
+#section("B is pulled up: A slides down the incline, and friction on A points up it", grid(
+  columns: (1fr, 1fr),
+  align: center,
+  scene(light-slope-pulley, labels: "both", forces: true, style: (force-floor: 0.1)),
+  fbd(light-slope-pulley, "A", style: (force-floor: 0.1)),
+))
+
+#section("Answers when A slides down", {
+  solve(light-slope-pulley, "A")
+  linebreak()
+  solve(light-slope-pulley, "A", find: "friction")
+})
+
+#pagebreak()
+
+== Friction is drawn only where its direction is decided
+
+#let undecided-slope = situation(
+  ramp("incline", angle: 30deg, length: 6),
+  block("A", mass: 4, on: "incline", mu: (s: $mu_s$, k: $mu_k$)),
+)
+
+#section("Symbolic coefficients: the weight is drawn and no friction arrow is", scene(
+  undecided-slope,
+  forces: true,
+))
+
+#section("The force table still lists the friction, with its magnitude left blank", force-table(undecided-slope, "A"))
+
+#section("Declining says which quantity is missing, and assume: answers it", {
+  solve(undecided-slope, "A")
+  linebreak()
+  solve(undecided-slope, "A", assume: "sliding", find: "acceleration")
+})
+
+#pagebreak()
+
+== The arc's centre and a ceiling that continues from a surface
+
+#let centred-loop = situation(
+  ground("approach", length: 2.5),
+  arc("loop", radius: 2, start-angle: -90deg, end-angle: 270deg, side: "inside", from: "approach.end"),
+  disk("car", mass: 1, on: "loop", at: 18%, radius: 0.3, orientation: 35deg, label: $C$),
+)
+
+#section("The loop's centre is an anchor: the radius is measured from it, and the centre is called out", scene(
+  centred-loop,
+  annotations: (
+    dimension(from: "loop.center", to: "loop.end", label: $r$),
+    callout(at: "loop.center", label: [centre], direction: "south-east"),
+  ),
+))
+
+#let roof-from-apex = situation(
+  ramp("incline", angle: 30deg, length: 4),
+  ceiling("roof", from: "incline.apex", length: 3),
+  block("A", mass: 1, on: "incline", at: 40%),
+)
+
+#section("A ceiling that starts at the apex takes the apex's level, with no height of its own", scene(
+  roof-from-apex,
+  labels: "name",
+))
+
+#pagebreak()
+
+== Two bodies over a pulley on a level floor
+
+#let floor-pulley-scene = situation(
+  ground("floor", length: 8),
+  pulley("P", at: (on: "floor.end", offset: (0, 0.5)), radius: 0.5),
+  block("A", mass: 4, on: "floor", at: 50%, size: 2, mu: (s: 0.30, k: 0.20)),
+  block("B", mass: 2, hanging: "P.right", drop: 1.5, size: 0.8),
+  rope("cord", from: "A.right", to: "B.top", over: "P"),
+)
+
+#section("The rope runs along the floor to the top of the pulley, and B hangs beside its edge", scene(
+  floor-pulley-scene,
+  labels: "both",
+  forces: true,
+))
+
+#section("Friction on A points away from the pulley, and the answers follow", grid(
+  columns: (1fr, 1fr),
+  align: center,
+  fbd(floor-pulley-scene, "A"),
+  align(left, {
+    solve(floor-pulley-scene, "A")
+    linebreak()
+    solve(floor-pulley-scene, "A", find: "tension")
+  }),
+))

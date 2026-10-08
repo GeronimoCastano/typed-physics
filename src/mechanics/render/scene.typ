@@ -10,6 +10,7 @@
 #import "structures.typ" as structures
 #import "connectors.typ" as connectors
 #import "loads.typ" as loads
+#import "label-placement.typ" as label-placement
 #import "annotations/lib.typ" as annotation-rendering
 #import "../style.typ": resolve-surface-style
 
@@ -307,6 +308,30 @@
 
   for body-name in scene.body-order {
     let body = scene.bodies.at(body-name)
+    // The arrows drawn on a body are obstacles for its mass label, so the label
+    // is placed against exactly what the figure shows. Its box is then passed on
+    // so the arrows' own symbols keep clear of it.
+    let drawn-force-directions = if body-name in bodies-showing-forces {
+      force-enumeration.enumerate-forces(
+        scene,
+        body-name,
+        solution: solutions.at(body-name, default: none),
+      ).filter(acting-force => acting-force.direction != none).map(
+        acting-force => acting-force.direction,
+      )
+    } else {
+      ()
+    }
+    let body-label-setting = body-label-settings.at(body-name)
+    let shows-mass-label = (
+      body-label-setting.is-visible
+        and body-label-setting.mode in ("symbol", "mass", "both")
+    )
+    let mass-label-point = if shows-mass-label {
+      label-placement.mass-label-point(scene, body, drawn-force-directions)
+    } else {
+      none
+    }
     if bodies-showing-forces.contains(body-name) {
       render-forces-on-body(
         scene,
@@ -314,6 +339,12 @@
         force-arrow-lengths.at(body-name),
         diagram-style,
         solution: solutions.at(body-name, default: none),
+        mass-label-box: if mass-label-point == none { none } else {
+          (
+            center: mass-label-point,
+            half-size: label-placement.mass-label-half-size,
+          )
+        },
       )
     } else if loads {
       let applied-load-count = body.loads.len()
@@ -336,7 +367,8 @@
     render-body(
       body,
       diagram-style,
-      label-annotation: body-label-settings.at(body-name),
+      label-annotation: body-label-setting,
+      mass-label-point: mass-label-point,
     )
     // Friction belongs to a contact rather than to a surface, so it is named
     // beside the body that makes it. The label sits on its own downhill end,

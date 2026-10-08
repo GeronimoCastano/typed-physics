@@ -1164,7 +1164,7 @@ yourself, since a situation may hold more than one.
 #reference-table(
   [*Argument*], [*Meaning*],
   [#c("length:")], [How long the surface is. For a ramp, measured along the incline rather than along its base.],
-  [#c("height:")], [How high a wall stands, or how far above the ground a ceiling sits.],
+  [#c("height:")], [How high a wall stands, or how far above the ground a ceiling sits. A ceiling with #c("from:") takes its level from that point, so it takes no #c("height:"); giving both is refused.],
   [#c("side:")], [Which end of the scene a wall stands at, #c("left") or #c("right").],
   [#c("angle:")], [A ramp's inclination, between #c("0deg") and #c("90deg").],
   [#c("facing:")], [Which way a ramp climbs, #c("right") or #c("left").],
@@ -1442,6 +1442,14 @@ with no #c("mu:") is frictionless.
   ramp can still carry one frictionless body.
 ]
 
+A friction arrow points where the solution says friction acts. Sliding friction
+opposes the motion the solution predicts, and static friction opposes the
+tendency to move, so a body that would slide down a slope has its arrow pointing
+up it. When a coefficient is symbolic the regime is not decided, and then no
+arrow is drawn: nothing says which way the friction points. The force table
+keeps the friction row with a dash for its magnitude, and a declared velocity
+along the surface still fixes the direction, since friction opposes that motion.
+
 == Connectors
 
 ```typ
@@ -1460,9 +1468,10 @@ with no #c("mu:") is frictionless.
 )
 
 A rope tells the free-body diagram that a tension acts along it. Its magnitude
-is found only when the rope is the single thing holding a hanging body up; a
-rope joining two bodies, or running over a pulley, carries one unknown to both
-of its ends, and @models says why that is declined.
+is found when the rope is the single thing holding a hanging body up, and when
+it runs over a pulley between two bodies that the pulley model can pair. Any
+other rope joining two bodies carries one unknown to both of its ends, and
+@models says why that is declined.
 
 #demo[
   #example(```typ
@@ -1491,6 +1500,23 @@ of its ends, and @models says why that is declined.
   )
   #scene(s)
   ```, side: false)
+]
+
+#demo[
+  The two hanging bodies of an Atwood machine share one tension, which the
+  pulley model finds from the rope's vertical sides.
+
+  #report-example(```typ
+  #let s = situation(
+    ceiling("roof", length: 7, height: 3),
+    pulley("P", at: (on: "roof", at: 72%), radius: 0.6),
+    ball("A", mass: 4, hanging: "P.left", drop: 1, radius: 0.4),
+    ball("B", mass: 2, hanging: "P.right", drop: 1.4, radius: 0.4),
+    rope(from: "A.top", to: "B.top", over: "P"),
+  )
+  #solve(s, "A") \
+  #solve(s, "A", find: "tension")
+  ```)
 ]
 
 When one end of a spring is a body anchor, omit #c("at:") from a wall
@@ -2266,10 +2292,11 @@ words and your language.
 A situation reaches an answer in closed form when its unknowns can be put in an
 order where each one is determined by unknowns already found. That order exists
 whenever a body shares no unknown force with anything else that can move. Two
-bodies joined by a rope share a tension; two bodies in contact share a pair of
-contact forces; a body on a curved support carries a centripetal acceleration no
-declaration states. Each of those couples equations that then have to be solved
-together, and this release does not solve them together.
+bodies in contact share a pair of contact forces; a body on a curved support
+carries a centripetal acceleration no declaration states. Two bodies joined by a
+rope over a pulley share a tension, and this release solves exactly that pair in
+closed form, under the geometry the model below describes. Every other coupling
+has to be solved together, and this release does not solve them together.
 
 So the package does not have a general solver. It has a list of *models*, each
 one a shape it recognizes and a closed form it applies:
@@ -2284,6 +2311,13 @@ one a shape it recognizes and a closed form it applies:
   [#c("\"hanging-body\"")],
   [One body with a #c("mass:") hanging from a fixed attachment, with nothing
    else on the rope that holds it. Gives the tension.],
+  [#c("\"two-bodies-over-pulley\"")],
+  [Two bodies with a #c("mass:") joined by one rope over one #c("pulley"). Both
+   hang from it, which is an Atwood machine; or one rests on a #c("ground") or
+   #c("ramp") with its rope parallel to the surface while the other hangs on a
+   vertical rope, which is a modified Atwood machine. Gives the common
+   acceleration and its direction, the tension, and for the body on the surface
+   the normal force and the friction. Either body gives the same answer.],
 )
 
 #c("model-of") names the model a body falls under, or #c("none"), before
@@ -2295,6 +2329,30 @@ anything is solved:
 
 #c("solved-models()") returns that table as data, so a document can list the
 scope rather than restate it.
+
+The pulley model decides its regime the way a single contact does. The net pull
+along the rope is compared with the static friction the surface can supply, and
+only then is the direction of motion read off and the kinetic friction applied.
+A rope that leaves the surface at an angle is declined, because a tilted rope
+changes the normal force and the closed form no longer holds. A symbolic
+coefficient is declined with the message above unless #c("assume:") is given.
+
+#demo[
+  #report-example(```typ
+  #let s = situation(
+    ramp("incline", angle: 30deg, length: 7),
+    pulley("P", at: "incline.apex", radius: 0.5),
+    block("A", mass: 4, on: "incline", at: 55%,
+      size: 1, mu: (s: 0.30, k: 0.22)),
+    block("B", mass: 4, hanging: "P.right", drop: 2, size: 1),
+    rope("cord", from: "A.uphill", to: "B.top", over: "P"),
+  )
+  #solve(s, "A") \
+  #solve(s, "A", find: "tension") \
+  #solve(s, "A", find: "normal") \
+  #solve(s, "A", find: "friction")
+  ```)
+]
 
 A situation outside the list is declined by name. The message says which shared
 unknown was found and lists the models that exist, rather than promising a
@@ -2352,7 +2410,7 @@ States one quantity. #c("find:") chooses which:
   [#c("\"normal\"")], [The normal force.],
   [#c("\"friction\"")], [The friction force acting, static or kinetic.],
   [#c("\"regime\"")], [Whether the body slides or stays put.],
-  [#c("\"tension\"")], [The force in the rope holding a hanging body.],
+  [#c("\"tension\"")], [The force in the rope holding a hanging body, or the rope of a pulley pair.],
   [#c("auto")], [The acceleration for a sliding body, the regime for one that stays put, the tension for one that hangs.],
 )
 
@@ -2439,7 +2497,12 @@ or table.
 
 The keys above are what #c("\"single-contact-body\"") determines. A
 #c("\"hanging-body\"") result carries #c("model"), #c("body"),
-#c("attachment"), #c("weight"), and #c("tension") instead.
+#c("attachment"), #c("weight"), and #c("tension") instead. A
+#c("\"two-bodies-over-pulley\"") result carries #c("model"), #c("variant"),
+#c("body"), #c("pulley"), #c("contact-body"), #c("hanging-body"),
+#c("descending-body"), #c("regime"), #c("tension"), and #c("acceleration"), and
+#c("normal") and #c("friction") describe the body on the surface. Both bodies
+share one answer, so the result for either body has the same numbers.
 
 #demo[
   #report-example(```typ
@@ -2747,11 +2810,15 @@ affects a figure: every limitation below costs you a number, never a diagram.
 Mechanics is solved by the two models in @models. Outside them, the situation is
 declined by name and the reason is the shared unknown that was found:
 
-- *Anything a connector joins to a second movable thing.* Ropes, springs, and
-  pulleys draw, and a rope still tells a free-body diagram that a tension acts,
-  but a tension shared between two ends is not found. A connector between a body
-  and something fixed is the exception, because it holds the body rather than
-  joining it to another unknown.
+- *Anything a connector joins to a second movable thing, beyond the pulley
+  pair.* Ropes, springs, and pulleys draw, and a rope still tells a free-body
+  diagram that a tension acts, but a tension shared between two ends is found
+  only for two bodies over one pulley, as @models describes. A connector between
+  a body and something fixed is the exception, because it holds the body rather
+  than joins it to another unknown.
+- *A pulley pair with a rope that is not parallel to its surface, or with a
+  body on a wall, ceiling, or curve.* These draw and enumerate their forces, and
+  the answer is declined by name.
 - *Bodies in contact.* #c("touching:") places them side by side; the pair of
   contact forces between them is not derived, and no action–reaction pair is
   drawn.

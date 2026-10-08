@@ -70,6 +70,11 @@
       base: point-anchor(surface.base-corner),
     )
   }
+  // An arc's centre is the point its curve turns about, which is where a
+  // dimension to the curve or a callout on it is measured from.
+  if surface.kind == "arc" {
+    anchors += (center: point-anchor(surface.center),)
+  }
   anchors
 }
 

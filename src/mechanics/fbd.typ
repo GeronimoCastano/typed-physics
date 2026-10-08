@@ -119,6 +119,9 @@
       }
 
       for (force-index, acting-force) in acting-forces.enumerate() {
+        // A force whose direction is undecided has no arrow to draw; its
+        // magnitude and its row in the force table are still reported.
+        if acting-force.direction == none { continue }
         let force-style = resolve-force-style(
           diagram-style,
           acting-force.style,

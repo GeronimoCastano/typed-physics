@@ -65,6 +65,42 @@
   unit: newtons,
 )
 
+// The pulley pair's motion, said the way the figure reads: the hanging body
+// falls or rises, and the body on the surface goes toward its pulley or away
+// from it, which on a ramp is up or down the slope.
+#let _pulley-motion-words(scene, solution) = {
+  if solution.variant == "atwood" {
+    return solution.descending-body + " descends and " + solution.ascending-body + " rises"
+  }
+  let contact-surface = scene.surfaces.at(solution.surface)
+  let contact-motion = if contact-surface.kind == "ramp" {
+    if solution.pulled-moves-toward-pulley { "up the incline" } else { "down the incline" }
+  } else if solution.pulled-moves-toward-pulley {
+    "toward the pulley"
+  } else {
+    "away from the pulley"
+  }
+  if solution.descending-body == solution.hanging-body {
+    solution.hanging-body + " descends and " + solution.contact-body + " moves " + contact-motion
+  } else {
+    solution.contact-body + " moves " + contact-motion + " and " + solution.hanging-body + " rises"
+  }
+}
+
+// Normal force and friction belong to the body on a surface. A pulley pair
+// whose bodies both hang has no surface to press against or rub.
+#let _validate-contact-quantity(solution, asked-for) = {
+  if solution.model != "two-bodies-over-pulley" { return }
+  assert(
+    solution.contact-body != none,
+    message: (
+      "typed-physics: solve(find: "
+        + repr(asked-for)
+        + ") asks for a contact quantity, but both bodies of this pulley pair hang, so no body rests on a surface"
+    ),
+  )
+}
+
 #let typeset-answer(scene, solution, find: auto, direction: true) = {
   let solution-is-undetermined = solution.status == "undetermined"
   let asked-for = if find == auto {
@@ -79,10 +115,17 @@
   // The normal force falls out of the balance across the surface, which does
   // not depend on which way the body is about to go.
   if asked-for == "normal" {
+    _validate-contact-quantity(solution, asked-for)
     return _typeset-stated-value($N$, solution.normal.expression, unit: newtons)
   }
 
   if solution-is-undetermined {
+    if solution.model == "two-bodies-over-pulley" {
+      return [
+        typed-physics cannot decide which way the pulley pair moves, because #solution.reason. Give the coefficients and masses
+        as numbers, or state the regime with `assume:`.
+      ]
+    }
     return [
       typed-physics cannot decide whether *#solution.body* slides, because #solution.reason. Give the coefficients and masses
       as numbers, or state the regime with `assume:`.
@@ -91,7 +134,12 @@
 
   if asked-for == "regime" { return solution.regime }
 
+  if asked-for == "tension" {
+    return _typeset-stated-value($T$, solution.tension.expression, unit: newtons)
+  }
+
   if asked-for == "friction" {
+    _validate-contact-quantity(solution, asked-for)
     let friction-symbol = if not solution.rough {
       $f$
     } else if solution.regime == "static" { $f_s$ } else { $f_k$ }
@@ -109,6 +157,9 @@
   )
   if solution.regime == "static" or not direction {
     return stated-acceleration
+  }
+  if solution.model == "two-bodies-over-pulley" {
+    return [#stated-acceleration, #_pulley-motion-words(scene, solution)]
   }
   [#stated-acceleration, #_motion-direction-words(scene, solution)]
 }

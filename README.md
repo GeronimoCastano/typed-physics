@@ -31,6 +31,29 @@ Built on [CeTZ](https://typst.app/universe/package/cetz).
 > Typst's own `block`. Reach for it as `std.block`, or import only the names you
 > use.
 
+## Examples
+
+<table>
+<tr>
+  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/incline-friction-push.typ"><img src="assets/readme/examples/incline-friction-push.png" width="400"></a></td>
+  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/loop-the-loop.typ"><img src="assets/readme/examples/loop-the-loop.png" width="400"></a></td>
+</tr>
+<tr>
+  <td>A push on an incline: the solver decides the regime, the normal force, and the acceleration</td>
+  <td>Loop-the-loop: energy conservation fixes the speed at the top of the loop</td>
+</tr>
+<tr>
+  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/pendulum-release.typ"><img src="assets/readme/examples/pendulum-release.png" width="400"></a></td>
+  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/series-parallel-circuit.typ"><img src="assets/readme/examples/series-parallel-circuit.png" width="400"></a></td>
+</tr>
+<tr>
+  <td>A released pendulum: the rise h and the speed at the bottom from energy conservation</td>
+  <td>A series–parallel DC network: component values, the equivalent resistance, and the currents</td>
+</tr>
+</table>
+
+*Click an example to see its source.*
+
 ## One declaration, four artifacts
 
 The figure, the free-body diagram, the component decomposition, and the answer
@@ -71,7 +94,7 @@ And it decides the friction regime rather than assuming it:
 #answer.available.value   // 13.6 — the most this contact can supply
 ```
 
-## Examples
+## Walkthroughs
 
 ### A spring, a moving block, and a gap
 
@@ -155,22 +178,27 @@ it points at. None of them takes a coordinate.
 
 ```typst
 #let s = situation(
-  ground("floor", length: 8, mu: (s: 0.300, k: 0.220)),
-  block("A", mass: 4, on: "floor", at: 55%, size: 1.2),
-  pulley("wheel", at: "floor.end", radius: 0.55),
-  block("B", mass: 3, hanging: "wheel.right", drop: 1.6, size: 1.2),
-  rope("cord", from: "A.right", to: "B.top", over: "wheel"),
+  ramp("incline", angle: 30deg, length: 7),
+  pulley("P", at: "incline.apex", radius: 0.5),
+  block("A", mass: 4, on: "incline", at: 55%, size: 1, mu: (s: 0.300, k: 0.220)),
+  block("B", mass: 4, hanging: "P.right", drop: 2, size: 1),
+  rope("cord", from: "A.uphill", to: "B.top", over: "P"),
 )
 
 #scene(s, labels: "both", frictions: true)
 #fbd(s, "A")
 #fbd(s, "B")
+#solve(s, "A")                    // a = 1.52 m/s², B descends and A moves up the incline
+#solve(s, "A", find: "tension")   // T = 33.2 N
 ```
 
-![Block, pulley, and hanging mass with their free-body diagrams](assets/readme/pulley.png)
+![Modified Atwood machine with free-body diagrams](assets/readme/pulley.png)
 
-The free-body diagrams show tension along the rope and friction opposing the
-pull on A. The shared tension and the two-body motion are not solved.
+The two bodies share one tension and one acceleration. The rope runs along the
+incline and B hangs on a vertical rope, so the pair is solved in closed form: the
+net pull is compared with the static friction the incline can supply, and kinetic
+friction then opposes the motion that results. Friction on A points down the
+slope because the regime says it does.
 
 ### A DC circuit
 
@@ -349,9 +377,10 @@ answer it yourself.
 There is no general solver here, and that is a choice. A situation reaches an
 answer in closed form when its unknowns can be ordered so each is determined by
 ones already found, which holds whenever a body shares no unknown force with
-anything else that can move. Two bodies joined by a rope share a tension; two
-bodies in contact share a pair of contact forces; a body on a curved support
-carries a centripetal acceleration no declaration states.
+anything else that can move. Two bodies in contact share a pair of contact
+forces; a body on a curved support carries a centripetal acceleration no
+declaration states. Two bodies joined by a rope over a pulley share a tension,
+and the pulley model solves exactly that pair.
 
 So mechanics is a named, finite list of models, and the list is the promise:
 
@@ -359,6 +388,7 @@ So mechanics is a named, finite list of models, and the list is the promise:
 | --- | --- |
 | `single-contact-body` | One body with a `mass:` on a `ground`, `ramp`, `wall`, or `ceiling`, carrying only the loads it declares. Gives the normal force, the friction force, the regime, and the acceleration. |
 | `hanging-body` | One body with a `mass:` hanging from a fixed attachment, with nothing else on its rope. Gives the tension. |
+| `two-bodies-over-pulley` | Two bodies with a `mass:` joined by one rope over one `pulley`: both hang (an Atwood machine), or one rests on a `ground` or `ramp` with its rope parallel to it while the other hangs on a vertical rope (a modified Atwood machine). Gives the common acceleration and its direction, the tension, and the normal force and friction on the body on the surface. |
 
 Anything else is declined by name, with the shared unknown that was found:
 
@@ -367,6 +397,9 @@ typed-physics: no solved model matches "A": body "B" rests against it, and
 two bodies in contact share a pair of contact forces that has to be found
 together with their motion.
 ```
+
+A pulley pair whose rope leaves the surface at an angle, or whose body rests on a
+wall, a ceiling, or a curve, is declined by name in the same way.
 
 **No figure goes through a model.** A situation nothing solves still draws,
 still shows its free-body diagram, and still lists the forces acting, with the

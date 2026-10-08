@@ -350,4 +350,26 @@
   dimension(from: (on: "A.bottom-right", offset: (0, 0.3)), to: "P.bottom"),
 ))
 
+// An arc's centre is an anchor, so a dimension or callout can be measured from it.
+// The loop starts at the approach's end, a quarter turn below its centre.
+#let centred-loop = situation(
+  ground("approach", length: 2.5),
+  arc("loop", radius: 2, start-angle: -90deg, end-angle: 270deg, side: "inside", from: "approach.end"),
+)
+#assert(calc.abs(centred-loop.surfaces.loop.center.at(0) - 2.5) < 1e-9)
+#assert(calc.abs(centred-loop.surfaces.loop.center.at(1) - 2) < 1e-9)
+
+// A ceiling that continues from a surface point takes its level from that point.
+#let roof-from-apex = situation(
+  ramp("incline", angle: 30deg, length: 4),
+  ceiling("roof", from: "incline.apex", length: 3),
+)
+#assert(roof-from-apex.surfaces.roof.height == roof-from-apex.surfaces.incline.apex.at(1))
+#assert(roof-from-apex.surfaces.roof.start == roof-from-apex.surfaces.incline.apex)
+#scene(roof-from-apex)
+#scene(centred-loop, annotations: (
+  dimension(from: "loop.center", to: "loop.end", label: $r$),
+  callout(at: "loop.center", label: [centre], direction: "south-east"),
+))
+
 #import "rope-forces.typ"

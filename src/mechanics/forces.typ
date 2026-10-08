@@ -94,9 +94,45 @@
   )
 }
 
+// The share of a body's weight that acts along its rope, positive toward the
+// pulley. A hanging body's rope is vertical, so its whole weight stands along it.
+// A body on a surface only feels the component down the slope, and the sign of
+// its rope's direction along the surface says whether that is up or down it.
+#let weight-component-toward-pulley(
+  body,
+  weight-force-magnitude,
+  toward-pulley-direction,
+) = {
+  let rope-rise = if body.support == none {
+    expression.number(calc.round(toward-pulley-direction.at(1), digits: 6))
+  } else {
+    expression.product(
+      expression.number(calc.round(
+        vector.dot-product(toward-pulley-direction, body.direction),
+        digits: 6,
+      )),
+      expression.sine(body.inclination-quantity),
+    )
+  }
+  expression.negated(expression.product(weight-force-magnitude, rope-rise))
+}
+
 #let applied-load-symbol(applied-load, load-index, applied-load-count) = {
   if applied-load.label != auto { return applied-load.label }
   if applied-load-count <= 1 { $F$ } else { $F_#(load-index + 1)$ }
+}
+
+// The unit direction a rope pulls its end in. From the attachment on the body
+// it runs to the tangent point where it leaves the wheel, or to the far end when
+// it runs straight between the two.
+#let rope-direction-leaving(placed-rope, body-is-at-start) = {
+  let attachment-position = if body-is-at-start { placed-rope.start } else { placed-rope.end }
+  let next-rope-position = if placed-rope.over != none {
+    if body-is-at-start { placed-rope.start-tangent } else { placed-rope.end-tangent }
+  } else {
+    if body-is-at-start { placed-rope.end } else { placed-rope.start }
+  }
+  vector.normalized(vector.subtract(next-rope-position, attachment-position))
 }
 
 #let _rope-forces-on-body(scene, body, solution) = {
@@ -105,15 +141,10 @@
     let rope = scene.connectors.find(connector => connector.name == attachment.name)
     let body-is-at-start = attachment.endpoint == "start"
     let attachment-position = if body-is-at-start { rope.start } else { rope.end }
-    let next-rope-position = if rope.over != none {
-      if body-is-at-start { rope.start-tangent } else { rope.end-tangent }
-    } else {
-      if body-is-at-start { rope.end } else { rope.start }
-    }
     (
       role: "tension",
       symbol: if attached-ropes.len() == 1 { $T$ } else { $T_#(rope-index + 1)$ },
-      direction: vector.normalized(vector.subtract(next-rope-position, attachment-position)),
+      direction: rope-direction-leaving(rope, body-is-at-start),
       magnitude: if solution == none or "tension" not in solution { none } else {
         solution.tension.expression
       },
@@ -123,29 +154,26 @@
   })
 }
 
-#let _unsolved-friction-direction(body, acting-forces) = {
-  let tangential-directions(quantities) = quantities.filter(quantity => {
-    let magnitude = if quantity.magnitude == none { none } else {
-      expression.value-of(quantity.magnitude)
+// Without a solution, friction is oriented only by a motion the author declared,
+// since friction opposes a velocity along the surface. The loads on a body do
+// not decide it: a push up the slope may be smaller than the friction holding
+// the body still. With no declared motion the direction is undecided, so the
+// function returns none and no friction arrow is drawn.
+#let _unsolved-friction-direction(body) = {
+  let declared-motion-components = body.velocities.filter(velocity => {
+    let speed = if velocity.magnitude == none { none } else {
+      expression.value-of(velocity.magnitude)
     }
-    magnitude == none or calc.abs(magnitude) > 1e-9
-  }).map(quantity => vector.dot-product(quantity.direction, body.direction))
+    speed == none or calc.abs(speed) > 1e-9
+  }).map(velocity => vector.dot-product(velocity.direction, body.direction))
     .filter(component => calc.abs(component) > 1e-9)
-
-  let motion-directions = tangential-directions(body.velocities)
-  let driving-directions = tangential-directions(acting-forces + body.loads)
-  let candidate-directions = if motion-directions.len() > 0 {
-    motion-directions
-  } else {
-    driving-directions
-  }
-  // Unknown opposing forces cannot select a motion direction without a model.
-  let all-directions-are-positive = (
-    candidate-directions.len() > 0
-      and candidate-directions.all(component => component > 0)
-  )
-  if all-directions-are-positive { vector.reversed(body.direction) } else {
+  if declared-motion-components.len() == 0 { return none }
+  if declared-motion-components.all(component => component > 0) {
+    vector.reversed(body.direction)
+  } else if declared-motion-components.all(component => component < 0) {
     body.direction
+  } else {
+    none
   }
 }
 
@@ -195,7 +223,7 @@
 
   if body.support != none {
     let unsolved-friction-direction = if solution == none {
-      _unsolved-friction-direction(body, acting-forces)
+      _unsolved-friction-direction(body)
     } else { none }
     acting-forces.push((
       role: "normal",

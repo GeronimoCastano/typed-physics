@@ -148,16 +148,30 @@
   )
 }
 
-#let ceiling(..name, length: 8, height: 4, from: none, mu: none, style: (:)) = {
+// A ceiling is held at `height:` above the ground, or, with `from:`, at the
+// height of the point it continues from. Both cannot fix the same level, so
+// giving both is refused rather than letting one silently win.
+#let ceiling(..name, length: 8, height: none, from: none, mu: none, style: (:)) = {
   let surface-name = _resolve-element-name(name, "ceiling")
   validation.validate-positive-number(length, "ceiling \"" + surface-name + "\"", "length")
-  validation.validate-positive-number(height, "ceiling \"" + surface-name + "\"", "height")
   validation.validate-attachment(from, "ceiling \"" + surface-name + "\"", "from", allow-none: true)
+  assert(
+    from == none or height == none,
+    message: (
+      "typed-physics: ceiling \""
+        + surface-name
+        + "\" has both `from:` and `height:`; `from:` already places the ceiling at the height of its starting point, so remove `height:`, or remove `from:` to hold the ceiling at that height above the ground"
+    ),
+  )
+  let resolved-height = if from != none { none } else if height == none { 4 } else { height }
+  if resolved-height != none {
+    validation.validate-positive-number(resolved-height, "ceiling \"" + surface-name + "\"", "height")
+  }
   (
     kind: "ceiling",
     name: surface-name,
     length: length,
-    height: height,
+    height: resolved-height,
     from: from,
     friction: _resolve-friction-coefficients(mu),
     style: validate-surface-style(style, surface-name),

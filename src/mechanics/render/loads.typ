@@ -5,6 +5,7 @@
 #import "../../shared/vector.typ"
 #import "../forces.typ" as force-enumeration
 #import "geometry.typ" as geometry
+#import "label-placement.typ" as label-placement
 #import "../style.typ": resolve-body-style, resolve-force-style, resolve-velocity-style
 
 #let body-visible-boundary-distance = geometry.body-visible-boundary-distance
@@ -264,42 +265,87 @@
   arrow-lengths,
   diagram-style,
   solution: none,
+  mass-label-box: none,
 ) = {
   let acting-forces = force-enumeration.enumerate-forces(
     scene,
     body.name,
     solution: solution,
   )
+  let body-style = resolve-body-style(diagram-style, body.style)
+  // Each drawn arrow as a segment from the body's centre. The arrows are the
+  // obstacles for every other arrow's symbol, so a label never sits on a
+  // neighbouring arrow.
+  let drawn-arrow-segments = ()
   for (force-index, acting-force) in acting-forces.enumerate() {
-    let force-style = resolve-force-style(
-      diagram-style,
-      acting-force.style,
-      acting-force.role,
-    )
-    let body-style = resolve-body-style(diagram-style, body.style)
+    // Undecided directions are left undrawn, as in a free-body diagram.
+    if acting-force.direction == none { continue }
     let visible-boundary-distance = body-visible-boundary-distance(
       body,
       acting-force.direction,
       body-style.stroke,
     )
-    let arrow-tail-position = body.center
+    drawn-arrow-segments.push((
+      force-index: force-index,
+      start: body.center,
+      direction: acting-force.direction,
+      length: visible-boundary-distance + arrow-lengths.at(force-index),
+    ))
+  }
+  let fixed-obstacles = (
+    segments: label-placement.hanging-attachment-segments(body)
+      + label-placement.connector-segments(scene)
+      + label-placement.surface-segments(scene),
+    circles: label-placement.pulley-circles(scene),
+    boxes: label-placement.body-boxes(scene, none)
+      + if mass-label-box == none { () } else { (mass-label-box,) },
+  )
+  let placed-label-boxes = ()
+  for acting-force-segment in drawn-arrow-segments {
+    let force-index = acting-force-segment.force-index
+    let acting-force = acting-forces.at(force-index)
+    let force-style = resolve-force-style(
+      diagram-style,
+      acting-force.style,
+      acting-force.role,
+    )
     let arrow-tip-position = vector.point-along(
       body.center,
       acting-force.direction,
-      visible-boundary-distance + arrow-lengths.at(force-index),
+      acting-force-segment.length,
     )
     render-force-arrow(
-      arrow-tail-position,
+      body.center,
       arrow-tip-position,
       force-style.color,
       force-style.stroke,
     )
+    let neighbouring-arrows = drawn-arrow-segments.filter(
+      segment => segment.force-index != force-index,
+    )
+    let label-position = label-placement.choose-label-point(
+      label-placement.force-label-candidates(
+        arrow-tip-position,
+        acting-force.direction,
+      ),
+      label-placement.force-label-half-size,
+      (
+        segments: neighbouring-arrows + fixed-obstacles.segments,
+        circles: fixed-obstacles.circles,
+        boxes: placed-label-boxes + fixed-obstacles.boxes,
+      ),
+    )
+    placed-label-boxes.push((
+      center: label-position,
+      half-size: label-placement.force-label-half-size,
+    ))
     render-label(
-      vector.point-along(arrow-tip-position, acting-force.direction, 0.28),
+      label-position,
       text(fill: force-style.color, acting-force.symbol),
       force-style.text,
     )
   }
 }
+
 
 // ── Scene ────────────────────────────────────────────────────────────────────

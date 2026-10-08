@@ -115,7 +115,19 @@
     validate-attachment(declaration.from, source-description, "from", allow-none: true)
   } else if kind == "ceiling" {
     validate-positive-number(declaration.length, source-description, "length")
-    validate-positive-number(declaration.height, source-description, "height")
+    // `from:` fixes the ceiling's level, so a declared height is only stored
+    // when the ceiling starts at the origin.
+    assert(
+      declaration.from == none or declaration.height == none,
+      message: (
+        "typed-physics: "
+          + source-description
+          + " has both `from:` and `height:`; remove one so the ceiling's level is stated once"
+      ),
+    )
+    if declaration.height != none {
+      validate-positive-number(declaration.height, source-description, "height")
+    }
     validate-attachment(declaration.from, source-description, "from", allow-none: true)
   } else if kind == "ramp" {
     validate-positive-number(declaration.length, source-description, "length")

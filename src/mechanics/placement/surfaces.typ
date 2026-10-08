@@ -91,10 +91,14 @@
   }
 
   if surface-kind == "ceiling" {
+    // Without `from:` the ceiling hangs at its declared height; with it, the
+    // point it continues from fixes the level, and the placed height is read
+    // back from wherever the ceiling actually starts.
+    let ceiling-start = start-position((0, surface-declaration.height))
     return _placed-surface(
       surface-name,
       surface-kind,
-      start-position((0, surface-declaration.height)),
+      ceiling-start,
       (1, 0),
       (0, -1),
       surface-declaration.length,
@@ -103,7 +107,7 @@
       surface-declaration.style,
       (
         inclination-quantity: expression.number(0),
-        height: surface-declaration.height,
+        height: ceiling-start.at(1),
       ),
     )
   }

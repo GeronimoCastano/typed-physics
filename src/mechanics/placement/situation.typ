@@ -63,6 +63,14 @@
         )
       }
     } else { none }
+    // The element at the connector's other end, so a rope over a pulley can
+    // be traced to the body on the far side of the wheel.
+    let connector-partners = if declaration-kind in ("rope", "spring") {
+      (
+        anchors.attachment-element-name(declaration.to),
+        anchors.attachment-element-name(declaration.from),
+      )
+    } else { none }
     for (reference-index, reference) in references.enumerate() {
       if reference == none { continue }
       let referenced-name = anchors.attachment-element-name(reference)
@@ -77,6 +85,9 @@
         },
         far-end: if connector-endpoints == none { none } else {
           connector-endpoints.at(reference-index)
+        },
+        partner: if connector-partners == none { none } else {
+          connector-partners.at(reference-index)
         },
       ))
     }

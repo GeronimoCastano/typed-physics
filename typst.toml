@@ -8,4 +8,4 @@ description = "Declare mechanics and DC circuit systems and derive consistent ph
 repository = "https://github.com/GeronimoCastano/typed-physics"
 keywords = ["physics", "mechanics", "circuits", "free-body-diagram", "education"]
 categories = ["visualization"]
-exclude = ["assets/readme/*.png"]
+exclude = ["assets/readme/*.png", "assets/readme/examples/*.png"]

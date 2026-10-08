@@ -4,11 +4,11 @@
 #set text(font: "New Computer Modern", size: 11pt)
 
 #let s = situation(
-  ground("floor", length: 8, mu: (s: 0.300, k: 0.220)),
-  block("A", mass: 4, on: "floor", at: 55%, size: 1.2),
-  pulley("wheel", at: "floor.end", radius: 0.55),
-  block("B", mass: 3, hanging: "wheel.right", drop: 1.6, size: 1.2),
-  rope("cord", from: "A.right", to: "B.top", over: "wheel"),
+  ramp("incline", angle: 30deg, length: 7),
+  pulley("P", at: "incline.apex", radius: 0.5),
+  block("A", mass: 4, on: "incline", at: 55%, size: 1, mu: (s: 0.300, k: 0.220)),
+  block("B", mass: 4, hanging: "P.right", drop: 2, size: 1),
+  rope("cord", from: "A.uphill", to: "B.top", over: "P"),
 )
 
 #grid(

@@ -135,6 +135,14 @@ run_invalid_case electrical-capacitance-with-resistors "no single capacitance st
 run_invalid_case electrical-quantity-wrong-kind "so it has no capacitance"
 run_invalid_case electrical-unknown-component "which this circuit does not declare"
 run_invalid_case electrical-unknown-find "accepted values are"
+run_invalid_case ceiling-from-with-height "has both \`from:\` and \`height:\`"
+run_invalid_case ceiling-from-wall "walls are placed after the surfaces they stand beside"
+run_invalid_case arc-center-ratio "which is a single point"
+run_invalid_case pulley-pair-tilted-rope "leaves it at an angle to ramp"
+run_invalid_case pulley-pair-unhung-body "does not hang from pulley"
+run_invalid_case pulley-pair-assume-static-fails "says the pulley pair stays at rest"
+run_invalid_case pulley-pair-assume-sliding-fails "says the pulley pair moves"
+run_invalid_case pulley-pair-atwood-normal "both bodies of this pulley pair hang"
 
 typst compile \
   --root "$repository_root" \

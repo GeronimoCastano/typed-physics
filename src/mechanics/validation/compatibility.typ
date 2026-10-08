@@ -69,6 +69,15 @@
     let source-surface = declarations-by-name.at(
       attachment-element-name(declaration.from),
     )
+    // A wall without `from:` stands at the outer edge of the other surfaces,
+    // so it is placed after them and cannot be the point another surface starts
+    // from. The wall is left unattached and the other surface is written to
+    // meet it at the corner.
+    let corner-instruction = if kind == "ceiling" {
+      "remove `from:` from \"" + declaration.name + "\" and give it a `height:` equal to the wall's `height:`, so the two meet at their tops"
+    } else {
+      "remove `from:` from \"" + declaration.name + "\" too, so both start at the origin"
+    }
     assert(
       source-surface.kind != "wall",
       message: (
@@ -78,7 +87,10 @@
           + declaration.name
           + "\" cannot continue `from:` wall \""
           + source-surface.name
-          + "\" because default wall placement is resolved after spanning surfaces; attach the wall to this surface instead"
+          + "\", because walls are placed after the surfaces they stand beside. Declare \""
+          + source-surface.name
+          + "\" without `from:`, so it stands at the edge of the other surfaces, and "
+          + corner-instruction
       ),
     )
   }

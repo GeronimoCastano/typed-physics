@@ -130,9 +130,11 @@
 }
 
 #let anchors-for-kind(kind) = if kind in (
-  "ground", "ceiling", "arc", "wall",
+  "ground", "ceiling", "wall",
 ) {
   ("start", "end", "surface")
+} else if kind == "arc" {
+  ("start", "end", "surface", "center")
 } else if kind == "ramp" {
   ("start", "end", "surface", "foot", "apex", "base")
 } else if kind == "body" {
