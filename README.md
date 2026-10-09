@@ -35,16 +35,16 @@ Built on [CeTZ](https://typst.app/universe/package/cetz).
 
 <table>
 <tr>
-  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/incline-friction-push.typ"><img src="assets/readme/examples/incline-friction-push.png" width="400"></a></td>
-  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/two-rope-sign.typ"><img src="assets/readme/examples/two-rope-sign.png" width="400"></a></td>
+  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/5da63739055c180bca14c2ee188f9934b431d12b/assets/readme/examples/incline-friction-push.typ"><img src="assets/readme/examples/incline-friction-push.png" alt="Block pushed up an incline with friction and a free-body diagram" width="400"></a></td>
+  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/5da63739055c180bca14c2ee188f9934b431d12b/assets/readme/examples/two-rope-sign.typ"><img src="assets/readme/examples/two-rope-sign.png" alt="Sign hung by two ropes with angles and a free-body diagram" width="400"></a></td>
 </tr>
 <tr>
   <td>A push on an incline: the solver decides the regime, the normal force, and the acceleration</td>
   <td>A sign hung from a ceiling and a wall by two ropes</td>
 </tr>
 <tr>
-  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/pendulum-release.typ"><img src="assets/readme/examples/pendulum-release.png" width="400"></a></td>
-  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/series-parallel-circuit.typ"><img src="assets/readme/examples/series-parallel-circuit.png" width="400"></a></td>
+  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/5da63739055c180bca14c2ee188f9934b431d12b/assets/readme/examples/pendulum-release.typ"><img src="assets/readme/examples/pendulum-release.png" alt="Pendulum released from an angle with its rise and speed" width="400"></a></td>
+  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/5da63739055c180bca14c2ee188f9934b431d12b/assets/readme/examples/series-parallel-circuit.typ"><img src="assets/readme/examples/series-parallel-circuit.png" alt="Series-parallel resistor circuit with currents" width="400"></a></td>
 </tr>
 <tr>
   <td>A released pendulum: the rise h and the speed at the bottom from energy conservation</td>

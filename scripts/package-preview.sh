@@ -64,9 +64,11 @@ find "$repo_root/src" -type f -name '*.typ' | while IFS= read -r module_path; do
 done
 
 found_png=0
-for image in "$repo_root"/assets/readme/*.png; do
+for image in "$repo_root"/assets/readme/*.png "$repo_root"/assets/readme/examples/*.png; do
   if [ -f "$image" ]; then
-    cp "$image" "$target/assets/readme/"
+    image_relative=${image#"$repo_root/"}
+    mkdir -p "$(dirname -- "$target/$image_relative")"
+    cp "$image" "$target/$image_relative"
     found_png=1
   fi
 done
