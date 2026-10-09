@@ -5,7 +5,7 @@ A Typst drawing library that also understands physics.
 ![Block on an incline](assets/readme/incline.png)
 
 ```typst
-#import "@preview/typed-physics:0.2.0": *
+#import "@preview/typed-physics:0.3.0": *
 
 #let s = situation(
   ramp("incline", angle: 32deg, length: 8),
@@ -36,11 +36,11 @@ Built on [CeTZ](https://typst.app/universe/package/cetz).
 <table>
 <tr>
   <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/incline-friction-push.typ"><img src="assets/readme/examples/incline-friction-push.png" width="400"></a></td>
-  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/loop-the-loop.typ"><img src="assets/readme/examples/loop-the-loop.png" width="400"></a></td>
+  <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/two-rope-sign.typ"><img src="assets/readme/examples/two-rope-sign.png" width="400"></a></td>
 </tr>
 <tr>
   <td>A push on an incline: the solver decides the regime, the normal force, and the acceleration</td>
-  <td>Loop-the-loop: energy conservation fixes the speed at the top of the loop</td>
+  <td>A sign hung from a ceiling and a wall by two ropes</td>
 </tr>
 <tr>
   <td><a href="https://github.com/GeronimoCastano/typed-physics/blob/main/assets/readme/examples/pendulum-release.typ"><img src="assets/readme/examples/pendulum-release.png" width="400"></a></td>
@@ -207,7 +207,7 @@ branch of a `parallel` travels between the split and join nodes, which is how a
 network takes a shape.
 
 ```typst
-#import "@preview/typed-physics:0.2.0": electricity as e
+#import "@preview/typed-physics:0.3.0": electricity as e
 
 #let circuit = e.dc-circuit(
   e.voltage-source("V", voltage: 18),

@@ -17,7 +17,7 @@
 )
 
 #let string-length = 4.4
-#let release-angle = 35deg
+#let release-angle = 50deg
 
 #let s = situation(
   ceiling("roof", length: 8, height: 6.5),
@@ -44,13 +44,13 @@
       import cetz.draw: content, line
       draw(s, labels: "none", angles: "none",
         annotations: (
-          dimension(from: (on: "release.pivot", offset: (0, -0.25)),
-            to: "release.bob",
-            orientation: "aligned", side: "left", offset: 0.5, label: $L$),
+          brace(from: (on: "release.pivot", offset: (0.1, -0.3)),
+            to: (on : "release.bob", offset: (-0.3, 0.1)),
+            side: "left", offset: 0.3, label: $L$),
           dimension(from: "bottom.bob", to: "release.bob",
-            orientation: "vertical", side: "right", offset: 0.7, label: $h$),
+            orientation: "vertical", side: "right", offset: 1.5, label: $h$),
           arrow(from: "bottom.bob", to: (on: "bottom.bob", offset: (-2.0, 0)),
-            label: $v$),
+            label: $v$, color : blue),
         ))
       line("release.pivot", (rel: (0, -4.0), to: "release.pivot"),
         stroke: (paint: rgb("#64748B"), thickness: 0.6pt, dash: "dashed"))
@@ -58,7 +58,7 @@
           -theta-label-radius * calc.cos(theta-label-direction)),
         to: "release.pivot"),
         text(fill: rgb("#475569"))[$theta$])
-      content((rel: (0.6, -1.7), to: "release.bob"),
+      content((rel: (-2.5, -2.5), to: "release.bob"),
         box(fill: white, stroke: 0.6pt + rgb("#475569"), radius: 2pt,
           inset: 4pt, text(fill: rgb("#475569"), size: 9pt)[
             $v^2 = 2 g L (1 - cos theta)$ at the bottom]))
