@@ -430,7 +430,7 @@ every diagram-style default. An unknown key is an error, not a silent no-op.
 
 ## Documentation
 
-The [user guide](https://github.com/GeronimoCastano/typed-physics/blob/ee8c812677f20e14aca8908d12223f3c68adbaba/docs/documentation.pdf)
+The [user guide](https://github.com/GeronimoCastano/typed-physics/blob/5da6373/docs/documentation.pdf)
 documents every element, view, argument, and style key, with a runnable example
 for each.
 
